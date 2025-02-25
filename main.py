@@ -30,8 +30,8 @@ def services_menu(prop_info):
         print(f"Which service to execute for {prop_name}?\n"
             "1. Labels Audit\n"
             "2. Campaign Group Audit\n"
-            "3. Ad Group Report w/Labels\n"
-            "4. Gclid Report - TESTING")
+            "3. Ad Group Report w/Labels\n")
+            # "4. Gclid Report - TESTING")
         service_opt = input("Choose 1, 2, 3, or 4 ('ex' to exit): ")
         if service_opt == '1':
             # label_service_audit(client, customer_id)
