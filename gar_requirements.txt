@@ -26,6 +26,7 @@ multidict
 oauthlib
 propcache
 protobuf
+protos
 pyasn1
 pyasn1_modules
 pycparser
@@ -34,7 +35,6 @@ pyOpenSSL
 PySocks
 pyu2f
 PyYAML
-requests
 requests
 rsa
 six
