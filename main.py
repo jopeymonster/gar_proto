@@ -16,11 +16,13 @@ import services
 from authfiles import account_constants
 
 # establish vars
-dirpath = os.path.dirname(__file__)
+YAML = "gads_auth.yaml"
+filepath = os.path.dirname(os.path.realpath(__file__))
+auth_dir = os.path.join(filepath, "authfiles")
+yaml_loc = os.path.join(auth_dir, YAML)
+prop_dict = account_constants.PROP_INFO
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 default_file_name = f"gads_report_{timestamp}.csv"
-yaml_loc = os.path.join(dirpath, account_constants.YAML)
-prop_dict = account_constants.PROP_INFO
 
 # MENUS
 def services_menu(prop_info):
@@ -95,12 +97,12 @@ def main():
     print("\nGoogle Ads Reporter, developed by JDT using GAds API and gRPC\n"
           "NOTE: Enter 'ex' at any prompt will exit this reporting tool.")
     input("Press Enter When Ready...")
+    print(f"yaml loc: {yaml_loc}\n")
     prop_info = helpers.display_prop_list(prop_dict)
     prop_name, prop_id, prop_url = prop_info
     
     # debug constants info
-    print(f"yaml loc: {yaml_loc}\n"
-          f"\nSelected prop info:\n"
+    print(f"\nSelected prop info:\n"
           f"prop_name: {prop_name}\n"
           f"prop_id: {prop_id}\n"
           f"prop_url: {prop_url}")

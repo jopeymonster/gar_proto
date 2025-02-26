@@ -11,6 +11,9 @@ from urllib.parse import urljoin, urlparse
 # 3p imports
 from tabulate import tabulate
 
+timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+default_file_name = f"gads_report_{timestamp}.csv"
+
 # exceptions wrapper
 def handle_exceptions(func):
     def wrapper(*args, **kwargs):
@@ -58,7 +61,7 @@ else:
     __builtins__.input = custom_input
 
 # data handling
-def save_to_csv(table_data, filename='gads_report.csv'):
+def save_to_csv(table_data, filename=default_file_name):
     headers = [
         "date",
         "property",
