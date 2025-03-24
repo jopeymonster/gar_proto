@@ -44,10 +44,10 @@ def user_error(err_type):
     elif err_type in [3,4]:
         sys.exit("Problem with output data.")
 
-# exit menu, 'ex'
+# exit menu, 'exit'
 def custom_input(prompt=''):
     user_input = original_input(prompt)
-    if user_input.lower() == 'ex':
+    if user_input.lower() == 'exit':
         print("Exiting the program.")
         sys.exit()
     return user_input
@@ -95,7 +95,7 @@ def display_prop_list(prop_dict):
         prop_id, prop_url = values
         print(f"{i}. {prop_name} / ID: {prop_id}, URL: {prop_url}")
     while True:
-        selection = custom_input("\nSelect a property by number (1, 2, 3, etc) or enter 'ex' to exit: ").strip()
+        selection = custom_input("\nSelect a property by number (1, 2, 3, etc) or enter 'exit' to exit: ").strip()
         if selection.isdigit():
             selection = int(selection)
             if 1 <= selection <= len(prop_dict):
