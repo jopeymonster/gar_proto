@@ -1,5 +1,20 @@
 GAQL queries
 
+-- account, general
+SELECT
+  customer.descriptive_name,
+  customer.id,
+  metrics.clicks,
+  metrics.impressions,
+  metrics.ctr,
+  metrics.average_cpc,
+  metrics.cost_micros,
+  metrics.absolute_top_impression_percentage,
+  metrics.top_impression_percentage,
+  metrics.average_cpm
+FROM customer
+WHERE segments.date DURING LAST_7_DAYS
+
 -- label scope w/o metrics
 SELECT 
 label.name, 
