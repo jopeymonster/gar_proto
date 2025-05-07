@@ -46,6 +46,7 @@ def arc_sales_report(gads_service, client, start_date, end_date, time_seg, custo
     for batch in response:
         for row in batch.results:
             # ENUM decoding with fallbacks
+            arc = helpers.extract_arc(row.campaign.name)
             channel_type = (
                 channel_type_enum.AdvertisingChannelType.Name(row.campaign.advertising_channel_type)
                 if hasattr(row.campaign, 'advertising_channel_type') else 'UNDEFINED'               
@@ -62,6 +63,7 @@ def arc_sales_report(gads_service, client, start_date, end_date, time_seg, custo
                 row.segments.date,
                 row.customer.id,
                 row.customer.descriptive_name,
+                arc,
                 row.campaign.id,
                 row.campaign.name,
                 channel_type,
@@ -81,6 +83,7 @@ def arc_sales_report(gads_service, client, start_date, end_date, time_seg, custo
         "Day",
         "Customer ID",
         "Account name",
+        "Ad Reponse"
         "Campaign ID",
         "Campaign",
         "Campaign type",

@@ -113,6 +113,21 @@ def display_prop_list(prop_dict):
                     continue
         print("Invalid selection. Please try again.")
 
+def extract_arc(campaign_name):
+    """
+    Extracts the ARC designation from a campaign name.
+    The ARC is assumed to follow the first colon ':' in the name.
+    
+    Args:
+        campaign_name (str): The full campaign name.
+    
+    Returns:
+        str: The extracted ARC value, or 'UNDEFINED' if not found.
+    """
+    if not campaign_name or ':' not in campaign_name:
+        return 'UNDEFINED'
+    return campaign_name.split(':', 1)[1].strip() or 'UNDEFINED'
+
 def get_timerange():
     while True:
         print("Search for:\n"
