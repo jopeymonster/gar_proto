@@ -17,18 +17,12 @@ import services
 from authfiles import account_constants
 
 # establish vars
-"""
-YAML = "gads_auth.yaml"
-filepath = os.path.dirname(os.path.realpath(__file__))
-auth_dir = os.path.join(filepath, "authfiles")
-yaml_loc = os.path.join(auth_dir, YAML)
-"""
 prop_dict = account_constants.PROP_INFO
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 default_file_name = f"gads_report_{timestamp}.csv"
 
 # MENUS
-def main_menu(client):
+def main_menu(gads_service, client):
     """    
     # check if yaml file exists
     if not os.path.exists(yaml_loc):
@@ -67,50 +61,73 @@ def main_menu(client):
     data_scope = input("Choose 1 or 2 ('exit' to exit): ")
     if data_scope == '1':
         print("Reporting selected.")
-        report_menu(client, prop_info)
+        report_menu(gads_service, client, prop_info)
     elif data_scope == '2':
         print("Auditing selected.")
-        audit_menu(client, prop_info)
+        audit_menu(gads_service, client, prop_info)
     else:
         print("Invalid input, please select one of the indicated numbered options.")
         # exit
         sys.exit(1)
 
-def report_menu(client, prop_info):
+def report_menu(gads_service, client, prop_info):
     prop_name, prop_id, prop_url = prop_info
     print("Reporting Options:\n"
-        "1. Account Report\n"
-        "2. Campaign Report\n"
-        "3. Ad Group Report\n"
-        "4. Gclid Report\n"
-        "5. Labels Report\n"
-        "6. Campaign Group Report\n"
+        "1. ARC Sales Report\n"
+        "9. Test Query\n"
         "Or type 'exit' at any prompt to quit immediately.\n")
     service_opt = input("Choose 1, 2, 3, 4, etc ('exit' to exit): ")
     if service_opt == '1':
-        # account_report(client, customer_id)
-        services.account_report(client, customer_id=prop_id)
-    elif service_opt == '2':
-        # campaign_report(client, customer_id)
-        services.campaign_report(client, customer_id=prop_id)
-    elif service_opt == '3':
-        # ad_group_report(client, customer_id)
-        services.ad_group_report(client, customer_id=prop_id)
-    elif service_opt == '4':
-        # gclid_report(client, customer_id)
-        services.gclid_report(client, customer_id=prop_id)
-    elif service_opt == '5':
-        # labels_report(client, customer_id)
-        services.labels_report(client, customer_id=prop_id)
-    elif service_opt == '6':
-        # campaign_group_report(client, customer_id)
-        services.campaign_group_report(client, customer_id=prop_id)
+        # date_opt, start_date, end_date, time_seg = _query.get_timerange()
+        report_date_details = helpers.get_timerange()
+        date_opt, start_date, end_date, time_seg = report_date_details
+        # date_opt = report_date_details[0]
+        # time_seg = report_date_details[3]
+        # start_date = report_date_details[1]
+        # end_date = report_date_details[2]
+        date_vars = {}
+        start_string_value = "start"
+        end_string_value = "end"
+        date_vars[start_string_value] = f"'{start_date}'"
+        date_vars[end_string_value] = f"'{end_date}'"
+        """ testing - timeframe transformations, date_opt scope      
+        if date_opt == 'EQUALS': # AD_GROUP_SINGLE
+            time_condition = '='
+            start_date = date_vars["start"]
+        elif date_opt == 'BETWEEN': # AD_GROUP_RANGE
+            time_condition = date_opt
+            start_date = date_vars["start"]
+            end_date = date_vars["end"]
+        elif date_opt == 'DURING': # AD_GROUP_SINGLE
+            start_date = time_seg
+            time_condition = date_opt
+            time_seg = 'date'
+        else:
+            raise ValueError("Improper input or incorrect report date details")
+        """
+        # query testing
+        print("\nServices params passback after get_timerange:\n"
+            f"date_opt: {date_opt}\n"
+            f"time_seg: {time_seg}\n"
+            f"start_date: {start_date}\n"
+            f"end_date: {end_date}\n")
+            # f"time_condition: {time_condition}")
+        input("\nPause for debug - press ENTER to continue or input 'exit' to exit")
+
+        # time_detail = _query.TIME_DETAIL_STRINGS.get(date_opt)
+
+        # debug
+        # print(time_detail)
+        # input("Pause for debug, enter 'exit' to exit or ENTER to continue.")
+        services.arc_sales_report(gads_service, client, start_date, end_date, time_seg, customer_id=prop_id)
+    elif service_opt == '9':
+        services.test_query(gads_service, client, customer_id=prop_id)
     else:
         print("Invalid input, please select one of the indicated options.")
         # exit
         sys.exit(1)
 
-def audit_menu(client, prop_info):
+def audit_menu(gads_service, client, prop_info):
     prop_name, prop_id, prop_url = prop_info
     print("Auditing Options:\n"
         "1. Account Labels List\n"
@@ -120,10 +137,10 @@ def audit_menu(client, prop_info):
     service_opt = input("Choose 1, 2, 3, 4, etc ('exit' to exit): ")
     if service_opt == '1':
         # label_service_audit(client, customer_id)
-        services.label_service_audit(client, customer_id=prop_id)
+        services.label_service_audit(gads_service, client, customer_id=prop_id)
     elif service_opt == '2':
         # campaign_group_audit((client, customer_id)
-        services.campaign_group_audit(client, customer_id=prop_id)
+        services.campaign_group_audit(gads_service, client, customer_id=prop_id)
     elif service_opt == '3':
         # date_opt, start_date, end_date, time_seg = _query.get_timerange()
         report_date_details = helpers.get_timerange()
@@ -168,10 +185,10 @@ def audit_menu(client, prop_info):
         # input("Pause for debug, enter 'exit' to exit or ENTER to continue.")
 
         # execute full report
-        services.ad_group_metrics_service_report(client, start_date, end_date, time_seg, customer_id=prop_id)
+        services.ad_group_metrics_service_report(gads_service, client, start_date, end_date, time_seg, customer_id=prop_id)
         # services.ad_group_metrics_service_report(client, time_condition, start_date, end_date, time_seg, customer_id=prop_id)
     elif service_opt == '4':
-        services.click_view_metrics_report(client, customer_id=prop_id)
+        services.click_view_metrics_report(gads_service, client, customer_id=prop_id)
     else:
         print("Invalid input, please select one of the indicated options.")
 
@@ -181,9 +198,9 @@ def main():
     print("\nGoogle Ads Reporter, developed by JDT using GAds API and gRPC\n"
           "NOTE: Enter 'exit' at any prompt will exit this reporting tool.")
     input("Press Enter When Ready...")
-    # authenticate
-    client = auth.authenticate()
-    main_menu(client)
+    # generate service
+    gads_service, client = auth.generate_services()
+    main_menu(gads_service, client)
 
 if __name__ == '__main__':
     main()

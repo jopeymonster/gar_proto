@@ -126,4 +126,70 @@ ORDER BY
 segments.date ASC, 
 customer.descriptive_name ASC, 
 campaign.name ASC, 
-ad_group.name ASC 
+ad_group.name ASC
+
+-- reporting breakdown
+SELECT 
+  segments.date, 
+  customer.id, 
+  customer.descriptive_name, 
+  campaign.id, 
+  campaign.name, 
+  campaign.advertising_channel_type, 
+  campaign.labels, 
+  ad_group.id, 
+  ad_group.name, 
+  ad_group.labels, 
+  ad_group.type, 
+  ad_group_ad.ad.id, 
+  ad_group_ad.ad.type, 
+  ad_group_ad.labels, 
+  metrics.cost_micros, 
+  metrics.impressions, 
+  metrics.clicks, 
+  metrics.video_views, 
+  metrics.conversions, 
+  metrics.conversions_value, 
+  campaign.campaign_group 
+FROM ad_group_ad 
+WHERE 
+  metrics.clicks > 0 
+  AND segments.date BETWEEN '2025-01-01' AND '2025-01-31' 
+ORDER BY 
+  segments.date ASC, 
+  customer.descriptive_name ASC, 
+  campaign.name ASC, 
+  ad_group.name ASC
+
+-- reporting breakdown, w/campaign group
+SELECT 
+  segments.date, 
+  customer.id, 
+  customer.descriptive_name, 
+  campaign.id, 
+  campaign.name, 
+  campaign.advertising_channel_type, 
+  campaign.labels, 
+  ad_group.id, 
+  ad_group.name, 
+  ad_group.labels, 
+  ad_group.type, 
+  ad_group_ad.ad.id, 
+  ad_group_ad.ad.type, 
+  ad_group_ad.labels, 
+  metrics.cost_micros, 
+  metrics.impressions, 
+  metrics.clicks, 
+  metrics.video_views, 
+  metrics.conversions, 
+  metrics.conversions_value, 
+  campaign.campaign_group 
+FROM ad_group_ad 
+WHERE 
+  metrics.clicks > 0 
+  AND segments.date BETWEEN '2025-01-01' AND '2025-01-31' 
+ORDER BY 
+  segments.date ASC, 
+  customer.descriptive_name ASC, 
+  campaign.name ASC, 
+  ad_group.name ASC

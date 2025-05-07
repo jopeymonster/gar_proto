@@ -8,9 +8,9 @@ import sys
 from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
 
-def authenticate():
+def generate_services():
     """
-    Authenticates the Google Ads API client using the provided YAML file.
+    Authenticates the Google Ads client using the provided YAML file and generates the service for use in API calls.
     """
     # establish vars
     YAML = "gads_auth.yaml" # This file must be created following the instructions in the README file and placed in the authfiles directory.
@@ -36,4 +36,5 @@ def authenticate():
         print("Google Ads API client is not valid. Please check the file path.")
         sys.exit(1)
     print(f"yaml loc: {yaml_loc}\n")
-    return client
+    gads_service = client.get_service("GoogleAdsService")
+    return gads_service, client
