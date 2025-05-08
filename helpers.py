@@ -61,26 +61,7 @@ else:
     __builtins__.input = custom_input
 
 # data handling
-def save_to_csv(table_data, filename=default_file_name):
-    headers = [
-        "date",
-        "property",
-        "campaign name",
-        "campaign group",
-        "campaign labels",
-        "ad_group name",
-        "ad_group labels",
-        "campaign channel_type",
-        "cost",
-        "impressions",
-        "clicks",
-        "interactions",
-        "conversions",
-        "conversions value",
-        "property id",
-        "campaign id",
-        "ad_group id"
-    ]
+def save_to_csv(table_data, headers, filename=default_file_name):
     home_dir = Path.home()
     file_path = home_dir / filename
     with open(file_path, mode='w', newline='') as file:
@@ -116,17 +97,16 @@ def display_prop_list(prop_dict):
 def extract_arc(campaign_name):
     """
     Extracts the ARC designation from a campaign name.
-    The ARC is assumed to follow the first colon ':' in the name.
-    
+    The ARC is defined as the text after the last colon ':'.
     Args:
         campaign_name (str): The full campaign name.
-    
     Returns:
         str: The extracted ARC value, or 'UNDEFINED' if not found.
     """
     if not campaign_name or ':' not in campaign_name:
         return 'UNDEFINED'
-    return campaign_name.split(':', 1)[1].strip() or 'UNDEFINED'
+    arc = campaign_name.rsplit(':', 1)[-1].strip()
+    return arc if arc else 'UNDEFINED'
 
 def get_timerange():
     while True:
