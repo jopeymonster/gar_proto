@@ -61,7 +61,7 @@ else:
 
 # data handling
 def data_handling_options(table_data, headers):
-    print("Report complied! How would you like to view the report?\n"
+    print("How would you like to view the report?\n"
             "1. CSV\n"
             "2. Display table on screen\n")
     report_view = input("Choose 1 or 2 ('exit' to exit): ")

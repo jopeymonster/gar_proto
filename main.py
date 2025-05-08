@@ -64,7 +64,8 @@ def report_menu(gads_service, client):
         end_string_value = "end"
         date_vars[start_string_value] = f"'{start_date}'"
         date_vars[end_string_value] = f"'{end_date}'"
-        # query testing
+
+        # debug
         print("\nServices params passback after get_timerange:\n"
             f"date_opt: {date_opt}\n"
             f"time_seg: {time_seg}\n"
@@ -73,8 +74,13 @@ def report_menu(gads_service, client):
             # f"time_condition: {time_condition}")
         input("\nPause for debug - press ENTER to continue or input 'exit' to exit")
 
+        # start time
+        start_time = time.time()
         table_data, headers = services.arc_sales_report_single(
             gads_service, client, start_date, end_date, time_seg, customer_id=prop_id)
+        end_time = time.time()
+        print(f"Report complied!\n"
+              f"Execution time: {end_time - start_time:.2f} seconds\n")
         # handle data
         helpers.data_handling_options(table_data, headers)
     elif service_opt == '2':
