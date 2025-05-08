@@ -83,7 +83,7 @@ def arc_sales_report(gads_service, client, start_date, end_date, time_seg, custo
         "Day",
         "Customer ID",
         "Account name",
-        "Ad Reponse"
+        "Ad Reponse",
         "Campaign ID",
         "Campaign",
         "Campaign type",
