@@ -114,12 +114,23 @@ def report_menu(gads_service, client, prop_info):
             # f"time_condition: {time_condition}")
         input("\nPause for debug - press ENTER to continue or input 'exit' to exit")
 
-        # time_detail = _query.TIME_DETAIL_STRINGS.get(date_opt)
+        table_data, headers = services.arc_sales_report(
+            gads_service, client, start_date, end_date, time_seg, customer_id=prop_id)
+        print("Report complied! How would yo like to view the report?\n"
+              "1. CSV\n"
+              "2. Display table on screen\n")
+        report_view = input("Choose 1 or 2 ('exit' to exit): ")
+        if report_view == '1':
+            # save to csv
+            helpers.save_csv(table_data, headers)
+        elif report_view == '2':
+            # display table
+            helpers.display_table(table_data, headers)
+        else:
+            print("Invalid input, please select one of the indicated options.")
+            # exit
+            sys.exit(1)
 
-        # debug
-        # print(time_detail)
-        # input("Pause for debug, enter 'exit' to exit or ENTER to continue.")
-        services.arc_sales_report(gads_service, client, start_date, end_date, time_seg, customer_id=prop_id)
     elif service_opt == '9':
         services.test_query(gads_service, client, customer_id=prop_id)
     else:

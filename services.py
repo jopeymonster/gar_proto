@@ -38,7 +38,6 @@ def arc_sales_report(gads_service, client, start_date, end_date, time_seg, custo
             metrics.conversions_value
         FROM ad_group_ad
         WHERE segments.date BETWEEN '{start_date}' AND '{end_date}'
-        AND metrics.clicks > 0
         ORDER BY segments.date ASC, campaign.name ASC
     """
     response = gads_service.search_stream(customer_id=customer_id, query=query)
@@ -83,12 +82,12 @@ def arc_sales_report(gads_service, client, start_date, end_date, time_seg, custo
         "Day",
         "Customer ID",
         "Account name",
-        "Ad Reponse",
+        "ARC",
         "Campaign ID",
-        "Campaign",
+        "Campaign name",
         "Campaign type",
         "Ad group ID",
-        "Ad group",
+        "Ad group name",
         "Ad group type",
         "Ad ID",
         "Ad type",
@@ -99,6 +98,7 @@ def arc_sales_report(gads_service, client, start_date, end_date, time_seg, custo
         "Conversions",
         "Conv. value",
     ]
+    return table_data, headers
     input("Data ready. Press ENTER to display results...")
     pydoc.pager(tabulate(table_data, headers=headers, tablefmt="simple_grid"))
 
@@ -148,9 +148,6 @@ def account_report(client, customer_id):
         "clicks",
         "impressions",
         ]
-    # Display the data using tabulate
-    input("Report ready for viewing. Press ENTER to display results and 'Q' to exit output when done...")
-    pydoc.pager(tabulate(table_data, headers=headers, tablefmt="simple_grid"))
 
 def label_service_audit(gads_service, client, customer_id):
     gads_service = client.get_service("GoogleAdsService")

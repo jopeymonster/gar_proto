@@ -4,15 +4,13 @@ from pathlib import Path
 import os
 import sys
 import re
+import pydoc
 import requests
 from datetime import datetime
 from urllib.parse import urljoin, urlparse
 
 # 3p imports
 from tabulate import tabulate
-
-timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-default_file_name = f"gads_report_{timestamp}.csv"
 
 # exceptions wrapper
 def handle_exceptions(func):
@@ -61,14 +59,32 @@ else:
     __builtins__.input = custom_input
 
 # data handling
-def save_to_csv(table_data, headers, filename=default_file_name):
+def save_csv(table_data, headers):
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    default_file_name = f"gads_report_{timestamp}.csv"
+    print("Enter a file name  or leave blank for default...")
+    file_name_input = input(f"(default: {default_file_name}): ").strip()
+    if file_name_input is None:
+        file_name = default_file_name
+    else:
+        file_name = f"{file_name_input}.csv"
     home_dir = Path.home()
-    file_path = home_dir / filename
+    file_path = home_dir / file_name
     with open(file_path, mode='w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(headers)
         writer.writerows(table_data)
     print(f"Data saved to {file_path}")
+
+def display_table(table_data, headers):
+    """
+    Displays a table using the tabulate library.
+    Args:
+        table_data (list): The data to display in the table.
+        headers (list): The headers for the table.
+    """
+    input("Report ready for viewing. Press ENTER to display results and 'Q' to exit output when done...")
+    pydoc.pager(tabulate(table_data, headers=headers, tablefmt="simple_grid"))
 
 def display_prop_list(prop_dict):
     print("\nAvailable Properties:")
