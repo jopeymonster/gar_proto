@@ -1,6 +1,5 @@
 import pydoc
 from tabulate import tabulate
-from authfiles import account_constants as ac
 from decimal import Decimal, ROUND_HALF_UP
 from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
@@ -10,7 +9,7 @@ import helpers
 def test_query(gads_service, client, customer_id):
     return
 
-def arc_sales_report(gads_service, client, start_date, end_date, time_seg, customer_id):
+def arc_sales_report_single(gads_service, client, start_date, end_date, time_seg, customer_id):
     """
     Replicates the Google Ads Report Studio by pulling ad performance data
     with ad group and ad types using ad_group_ad as the main resource.
@@ -99,8 +98,42 @@ def arc_sales_report(gads_service, client, start_date, end_date, time_seg, custo
         "Conv. value",
     ]
     return table_data, headers
-    input("Data ready. Press ENTER to display results...")
-    pydoc.pager(tabulate(table_data, headers=headers, tablefmt="simple_grid"))
+
+def arc_sales_report_all(gads_service, client, start_date, end_date, time_seg, prop_info):
+    """
+    Generates ARC sales report for all accounts listed in prop_info.
+
+    Args:
+        gads_service: The Google Ads service client.
+        client: The authenticated Google Ads client.
+        start_date (str): Start date (YYYY-MM-DD).
+        end_date (str): End date (YYYY-MM-DD).
+        time_seg (str): Time segment or label.
+        prop_info (dict): Dictionary mapping account codes to [customer_id, domain].
+
+    Returns:
+        tuple: (sorted_data, headers) for display or export.
+    """
+    all_data = []
+    headers = None
+    for prop_reference, (customer_id, prop_descriptive) in prop_info.items():
+        print(f"Processing {prop_reference}...")
+        try:
+            table_data, headers = arc_sales_report_single(
+                gads_service, client, start_date, end_date, time_seg, customer_id
+            )
+            all_data.extend(table_data)
+        except Exception as e:
+            print(f"Error processing {prop_reference} ({customer_id}): {e}")
+    if not all_data:
+        print("No data returned for any accounts.")
+        return [], []
+    # Sort by: Day (0), Account name (2), descending Cost (12)
+    table_data = sorted(
+        all_data,
+        key=lambda r: (r[0], r[2], -float(r[12]))
+    )
+    return table_data, headers
 
 def account_report(client, customer_id):
     gads_service = client.get_service("GoogleAdsService")
@@ -183,7 +216,7 @@ def label_service_audit(gads_service, client, customer_id):
     input("Report ready for viewing. Press ENTER to display results and 'Q' to exit output when done...")
     pydoc.pager(tabulate(table_data, headers=headers, tablefmt="simple_grid"))
 
-def ad_group_metrics_service_report(gads_service, client, start_date, end_date, time_seg, customer_id):
+def complete_labels_audit(gads_service, client, start_date, end_date, time_seg, customer_id):
     channel_type_enum, ad_group_type_enum, ad_type_enum = get_enums(client)
     # Fetch label data
     label_query = """
