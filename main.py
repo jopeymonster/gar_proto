@@ -15,10 +15,8 @@ from google.ads.googleads.errors import GoogleAdsException
 import auth
 import helpers
 import services
-from authfiles import account_constants
 
 # establish vars
-prop_dict = account_constants.PROP_INFO
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 default_file_name = f"gads_report_{timestamp}.csv"
 
@@ -55,7 +53,7 @@ def report_menu(gads_service, client):
     service_opt = input("Choose 1, 2, 3, 4, etc ('exit' to exit): ").lower()
     if service_opt == '1':
         print("ARC Sales Report - Single Property selected...")
-        prop_info = helpers.get_account_properties()
+        prop_info = services.get_account_properties()
         prop_name, prop_id, prop_url = prop_info
         report_date_details = helpers.get_timerange()
         date_opt, start_date, end_date, time_seg = report_date_details
@@ -103,7 +101,7 @@ def report_menu(gads_service, client):
         input("\nPause for debug - press ENTER to continue or input 'exit' to exit")
 
         all_prop_data, headers = services.arc_sales_report_all(
-            gads_service, client, start_date, end_date, time_seg, prop_info=prop_dict)
+            gads_service, client, start_date, end_date, time_seg)
         # handle data
         helpers.data_handling_options(all_prop_data, headers)
 
@@ -122,17 +120,17 @@ def audit_menu(gads_service, client):
         "Or type 'exit' at any prompt to quit immediately.\n")
     service_opt = input("Choose 1, 2, 3, 4, etc ('exit' to exit): ")
     if service_opt == '1':
-        prop_info = helpers.get_account_properties()
+        prop_info = services.get_account_properties()
         prop_name, prop_id, prop_url = prop_info
         # label_service_audit(client, customer_id)
         services.label_service_audit(gads_service, client, customer_id=prop_id)
     elif service_opt == '2':
-        prop_info = helpers.get_account_properties()
+        prop_info = services.get_account_properties()
         prop_name, prop_id, prop_url = prop_info
         # campaign_group_audit((client, customer_id)
         services.campaign_group_audit(gads_service, client, customer_id=prop_id)
     elif service_opt == '3':
-        prop_info = helpers.get_account_properties()
+        prop_info = services.get_account_properties()
         prop_name, prop_id, prop_url = prop_info
         # date_opt, start_date, end_date, time_seg = _query.get_timerange()
         report_date_details = helpers.get_timerange()
@@ -178,13 +176,13 @@ def audit_menu(gads_service, client):
 
         # execute full report
         services.complete_labels_audit(gads_service, client, start_date, end_date, time_seg, customer_id=prop_id)
-    elif service_opt == '4':
-        services.click_view_metrics_report(gads_service, client, customer_id=prop_id)
+    # elif service_opt == '4':
+        # services.click_view_metrics_report(gads_service, client, customer_id=prop_id)
     else:
         print("Invalid input, please select one of the indicated options.")
 
 
-# @helpers.handle_exceptions
+@helpers.handle_exceptions
 def main():
     print("\nGoogle Ads Reporter, developed by JDT using GAds API and gRPC\n"
           "NOTE: Enter 'exit' at any prompt will exit this reporting tool.")

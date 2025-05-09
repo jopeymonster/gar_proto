@@ -1,5 +1,8 @@
 # gitignore for python projects
 
+# business/corporate specific files
+*_sportsw*
+
 # need to be updated
 *-test
 *-JDT

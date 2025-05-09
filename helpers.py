@@ -11,7 +11,6 @@ from urllib.parse import urljoin, urlparse
 
 # 3p imports
 from tabulate import tabulate
-from authfiles import account_constants
 
 # exceptions wrapper
 def handle_exceptions(func):
@@ -104,19 +103,6 @@ def display_table(table_data, headers):
     pydoc.pager(tabulate(table_data, headers=headers, tablefmt="simple_grid"))
 
 # account/property selection
-def get_account_properties():
-    prop_dict = account_constants.PROP_INFO
-    print("Select a property to report on:\n")
-    prop_info = display_prop_list(prop_dict)
-    prop_name, prop_id, prop_url = prop_info
-    # debug constants info
-    print(f"\nSelected prop info:\n"
-          f"prop_name: {prop_name}\n"
-          f"prop_id: {prop_id}\n"
-          f"prop_url: {prop_url}")
-    input("Pause for debug...")
-    return prop_info
-
 def display_prop_list(prop_dict):
     print("\nAvailable Properties:")
     for i, (prop_name, values) in enumerate(prop_dict.items(), start=1):

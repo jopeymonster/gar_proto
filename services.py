@@ -5,9 +5,26 @@ from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
 from google.api_core.exceptions import TooManyRequests, ResourceExhausted
 import helpers
+import account_constants_sportsw
+
+prop_dict = account_constants_sportsw.PROP_INFO
 
 def test_query(gads_service, client, customer_id):
     return
+
+# account/property selection
+def get_account_properties():
+    prop_dict = account_constants_sportsw.PROP_INFO
+    print("Select a property to report on:\n")
+    prop_info = helpers.display_prop_list(prop_dict)
+    prop_name, prop_id, prop_url = prop_info
+    # debug constants info
+    print(f"\nSelected prop info:\n"
+          f"prop_name: {prop_name}\n"
+          f"prop_id: {prop_id}\n"
+          f"prop_url: {prop_url}")
+    input("Pause for debug...")
+    return prop_info
 
 def arc_sales_report_single(gads_service, client, start_date, end_date, time_seg, customer_id):
     """
@@ -99,7 +116,7 @@ def arc_sales_report_single(gads_service, client, start_date, end_date, time_seg
     ]
     return table_data, headers
 
-def arc_sales_report_all(gads_service, client, start_date, end_date, time_seg, prop_info):
+def arc_sales_report_all(gads_service, client, start_date, end_date, time_seg):
     """
     Generates ARC sales report for all accounts listed in prop_info.
 
@@ -116,7 +133,7 @@ def arc_sales_report_all(gads_service, client, start_date, end_date, time_seg, p
     """
     all_data = []
     headers = None
-    for prop_reference, (customer_id, prop_descriptive) in prop_info.items():
+    for prop_reference, (customer_id, prop_descriptive) in prop_dict.items():
         print(f"Processing {prop_reference}...")
         try:
             table_data, headers = arc_sales_report_single(
