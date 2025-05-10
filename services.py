@@ -7,14 +7,28 @@ from google.api_core.exceptions import TooManyRequests, ResourceExhausted
 import helpers
 import account_constants_sportsw
 
-prop_dict = account_constants_sportsw.PROP_INFO
+prop_dict = account_constants_sportsw.ACCOUNT_INFO
 
 def test_query(gads_service, client, customer_id):
     return
 
 # account/property selection
 def get_account_properties():
-    prop_dict = account_constants_sportsw.PROP_INFO
+    """
+    Displays a list of available properties and prompts the user to select one.
+    
+    Returns:
+        tuple: A tuple containing the selected property name, ID, and URL.
+
+    Source: account_constants.py
+    ACCOUNT_INFO = {
+    "Account Reference": ["Account ID", "Description"],
+    "EXAMPLE1": ["1234567890", "Example Corp 1 / example.com"],
+    "EXAMPLE2": ["0987654321", "Example Corp 2 / example2.com"],
+    }
+
+    """
+    prop_dict = account_constants_sportsw.ACCOUNT_INFO
     print("Select a property to report on:\n")
     prop_info = helpers.display_prop_list(prop_dict)
     prop_name, prop_id, prop_url = prop_info

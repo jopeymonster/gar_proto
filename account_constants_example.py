@@ -19,7 +19,7 @@ Examples of the dictionary structure and property groups are provided below.
 """
 
 # example account dictionary
-PROP_INFO = {
+ACCOUNT_INFO = {
 "EXAMPLE1": ["1234567890", "Example Corp 1 / example.com"],
 "EXAMPLE2": ["0987654321", "Example Corp 2 / example2.com"],
 "EXAMPLE3": ["1122334455", "Example Corp 3 / example3.com"],
@@ -28,41 +28,8 @@ PROP_INFO = {
 }
 
 # Grouping of accounts
-US_PROPS = ["EXAMPLE1", "EXAMPLE2"]
-EU_PROPS = ["EXAMPLE3", "EXAMPLE4"]
-AU_PROPS = ["EXAMPLE5"]
-SOFTGOODS_PROPS = ["EXAMPLE1", "EXAMPLE2", "EXAMPLE3"]
-HARDGROODS_PROPS = ["EXAMPLE4", "EXAMPLE5"]
-
-CAMPAIGN_TYPES = [
-"UNSPECIFIED",
-"UNKNOWN",
-"SEARCH",
-"DISPLAY",
-"SHOPPING",
-"HOTEL",
-"VIDEO",
-"MULTI_CHANNEL",
-"LOCAL",
-"SMART",
-"PERFORMANCE_MAX",
-"LOCAL_SERVICES",
-"TRAVEL",
-"DEMAND_GEN"
-]
-
-REPORTING_OPTIONS = {
-"1": "Account",
-"2": "Campaign",
-"3": "Ad Group",
-"4": "GCLID",
-"5": "Label",
-"6": "Campaign Group",
-}
-
-AUDIT_OPTIONS = {
-"1": "Ad Group",
-"2": "Campaign",
-"3": "Label",
-"4": "Campaign Group",
-}
+US_ACCOUNTS = ["EXAMPLE1", "EXAMPLE2"]
+EU_ACCOUNTS = ["EXAMPLE3", "EXAMPLE4"]
+AU_ACCOUNTS = ["EXAMPLE5"]
+SOFTGOODS_ACCOUNTS = ["EXAMPLE1", "EXAMPLE2", "EXAMPLE3"]
+HARDGROODS_ACCOUNTS = ["EXAMPLE4", "EXAMPLE5"]

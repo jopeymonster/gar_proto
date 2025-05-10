@@ -1,24 +1,16 @@
 # updated - 5/5/25
 
-# imports
-import os
+# IMPORTS
+# standard
 import sys
-from datetime import datetime
-from pathlib import Path
 import time
-
 # gads
 from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
-
 # helpers
 import auth
 import helpers
 import services
-
-# establish vars
-timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-default_file_name = f"gads_report_{timestamp}.csv"
 
 # MENUS
 def main_menu(gads_service, client):

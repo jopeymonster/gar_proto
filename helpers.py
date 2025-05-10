@@ -75,22 +75,37 @@ def data_handling_options(table_data, headers):
         # exit
         sys.exit(1)
 
+def sanitize_filename(name):
+    """
+    Removes invalid filename characters for cross-platform safety.
+    """
+    return re.sub(r'[<>:"/\\|?*]', '', name)
+
 def save_csv(table_data, headers):
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     default_file_name = f"gads_report_{timestamp}.csv"
-    print("Enter a file name  or leave blank for default...")
-    file_name_input = input(f"(default: {default_file_name}): ").strip()
-    if file_name_input is None:
-        file_name = default_file_name
+    print(f"Default file name: {default_file_name}")
+    file_name_input = input("Enter a file name (or leave blank for default): ").strip()
+    if file_name_input:
+        base_name = file_name_input.replace('.csv', '').strip()
+        safe_name = sanitize_filename(base_name)
+        if not safe_name:
+            print("Invalid file name entered. Using default instead.")
+            file_name = default_file_name
+        else:
+            file_name = f"{safe_name}.csv"
     else:
-        file_name = f"{file_name_input}.csv"
+        file_name = default_file_name
     home_dir = Path.home()
     file_path = home_dir / file_name
-    with open(file_path, mode='w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow(headers)
-        writer.writerows(table_data)
-    print(f"Data saved to {file_path}")
+    try:
+        with open(file_path, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(headers)
+            writer.writerows(table_data)
+        print(f"\nData saved to: {file_path}\n")
+    except Exception as e:
+        print(f"\nFailed to save file: {e}\n")
 
 def display_table(table_data, headers):
     """
