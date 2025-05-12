@@ -1,23 +1,49 @@
-import time
+# -*- coding: utf-8 -*-
 import csv
-from pathlib import Path
 import os
 import sys
 import re
 import pydoc
 import requests
 from datetime import datetime
-from urllib.parse import urljoin, urlparse
+from pathlib import Path
+import importlib.util
 
 # 3p imports
 from tabulate import tabulate
+from google.ads.googleads.errors import GoogleAdsException
+from google.api_core.exceptions import TooManyRequests, ResourceExhausted, Unauthenticated
 
 # exceptions wrapper
 def handle_exceptions(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
+        # generic requests exceptions
         except requests.exceptions.RequestException as e:
+            print_error(func.__name__, e)
+        # google ads exceptions
+        except Unauthenticated as e:
+            print("Unable to authenticate or invalid credentials.  Please check your YAML or ACCOUNTS file.")
+            print_error(func.__name__, e)
+        except GoogleAdsException as e:
+            print("Google Ads API error. Please check your credentials and account settings.")
+            print_error(func.__name__, e)
+        except TooManyRequests as e:
+            print("Too many requests. API quota may have been reached or accessed too quickly. Please try again later.")
+            print_error(func.__name__, e)
+        except ResourceExhausted as e:
+            print("Resource exhausted. API quota may have been reached or accessed too quickly. Please try again later.")
+            print_error(func.__name__, e)
+        # other exceptions
+        except KeyboardInterrupt:
+            print("\nExiting the program...")
+            sys.exit(0)
+        except EOFError as e:
+            print_error(func.__name__, e)
+        except OSError as e:
+            print_error(func.__name__, e)
+        except TypeError as e:
             print_error(func.__name__, e)
         except ValueError as e:
             print_error(func.__name__, e)
@@ -57,6 +83,58 @@ if isinstance(__builtins__, dict):
 else:
     original_input = __builtins__.input
     __builtins__.input = custom_input
+
+# account/property selection
+def get_account_properties(accounts_info):
+    """
+    Displays a list of available properties and prompts the user to select one.
+
+    Returns:
+        tuple: A tuple containing the selected property name, ID, and URL.
+
+    Source: account_constants_example.py or other (see argparse help for '--accounts')\n
+
+    ACCOUNT_INFO = {\n
+    "Account Reference": ["Account ID", "Description"],\n
+    "EXAMPLE1": ["1234567890", "Example Corp 1 / example.com"],\n
+    "EXAMPLE2": ["0987654321", "Example Corp 2 / example2.com"],\n
+    }\n
+
+    """
+    print("Select a property to report on:\n")
+    prop_info = display_prop_list(accounts_info)
+    prop_name, prop_id, prop_url = prop_info
+    # debug constants info
+    print(f"\nSelected prop info:\n"
+          f"prop_name: {prop_name}\n"
+          f"prop_id: {prop_id}\n"
+          f"prop_url: {prop_url}")
+    input("Pause for debug...")
+    return prop_info
+
+# account constants
+def load_account_constants(path):
+    """
+    Loads the account constants from the specified path.
+    The path should point to a Python file containing the ACCOUNT_INFO dictionary.
+    """
+    if not path:
+        print("No path provided for account constants file.\n"
+              "Please provide a valid path to the file now....\n")
+        path = input("Enter the path to the ACCOUNTS file (or 'exit' to exit): ").strip()
+        if not path or path.lower() == 'exit':
+            print("No path provided. Exiting...")
+            sys.exit(1)
+    if not os.path.exists(path):
+        print(f"Account constants file not found: {path}")
+        sys.exit(1)
+    # Load the module from the specified path
+    print(f"Loading account constants from: {path}")
+    module_name = os.path.splitext(os.path.basename(path))[0]
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.ACCOUNT_INFO
 
 # data handling
 def data_handling_options(table_data, headers):
