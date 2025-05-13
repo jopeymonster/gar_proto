@@ -46,13 +46,13 @@ def arc_sales_report_single(gads_service, client, start_date, end_date, time_seg
                 channel_type_enum.AdvertisingChannelType.Name(row.campaign.advertising_channel_type)
                 if hasattr(row.campaign, 'advertising_channel_type') else 'UNDEFINED'               
             )
-            ad_type = (
-                ad_type_enum.AdType.Name(row.ad_group_ad.ad.type_)
-                if hasattr(row.ad_group_ad.ad, 'type_') else 'UNDEFINED'
-            )
             ad_group_type = (
                 ad_group_type_enum.AdGroupType.Name(row.ad_group.type_)
                 if hasattr(row.ad_group, 'type_') else 'UNDEFINED'
+            )
+            ad_type = (
+                ad_type_enum.AdType.Name(row.ad_group_ad.ad.type_)
+                if hasattr(row.ad_group_ad.ad, 'type_') else 'UNDEFINED'
             )
             table_data.append([
                 row.segments.date,
@@ -132,9 +132,8 @@ def arc_sales_report_all(gads_service, client, start_date, end_date, time_seg, a
     )
     return table_data, headers
 
-def account_report(client, customer_id):
-    gads_service = client.get_service("GoogleAdsService")
-    query = """
+def account_report(gads_service, client, start_date, end_date, time_seg, customer_id):
+    query = f"""
     SELECT
     customer.descriptive_name,
     customer.id,
@@ -178,261 +177,95 @@ def account_report(client, customer_id):
         "clicks",
         "impressions",
         ]
+    return table_data, headers
 
-def label_service_audit(gads_service, client, customer_id):
-    gads_service = client.get_service("GoogleAdsService")
-    query = """
-        SELECT 
-        label.name, 
-        label.id, 
-        customer.descriptive_name 
-        FROM label
-        WHERE label.status = 'ENABLED'
-        ORDER BY 
-            customer.descriptive_name DESC
-    """ 
-    # Initialize an empty list to store the data
-    table_data = []
-    # Fetch data and populate the table_data list
-    response = gads_service.search_stream(customer_id=customer_id, query=query)
-    for data in response:
-        for row in data.results:
-            # Append each row's data as a list or tuple to the table_data list
-            table_data.append([
-                row.customer.descriptive_name,
-                row.label.name,
-                row.label.id,
-            ])
-    # Define the headers for the table
-    headers = [
-        "property",
-        "label name",
-        "label id",
-        ]
-    # Display the data using tabulate
-    input("Report ready for viewing. Press ENTER to display results and 'Q' to exit output when done...")
-    pydoc.pager(tabulate(table_data, headers=headers, tablefmt="simple_grid"))
-
-def complete_labels_audit(gads_service, client, start_date, end_date, time_seg, customer_id):
-    channel_type_enum, ad_group_type_enum, ad_type_enum = get_enums(client)
-    # Fetch label data
-    label_query = """
-        SELECT 
-        label.name, 
-        label.id, 
-        customer.descriptive_name 
-        FROM label
-        WHERE label.status = 'ENABLED'
-        ORDER BY 
-            customer.descriptive_name DESC
-    """
-    label_response = gads_service.search_stream(customer_id=customer_id, query=label_query)
-    # process label data
-    label_data = {}
-    for batch in label_response:
-        for row in batch.results:
-            label_data[str(row.label.id)] = row.label.name
-    # fetch campaign group data
-    camp_group_query = """
+def complete_labels_audit(gads_service, client, customer_id):
+    channel_type_enum, ad_group_type_enum, _ = get_enums(client)
+    # get label and campaign group metadata
+    label_table, label_table_headers, label_dict = get_labels(gads_service, client, customer_id)
+    camp_group_table, camp_group_headers, camp_group_dict = get_campaign_groups(gads_service, client, customer_id)
+    # query campaigns + ad groups
+    audit_query = """
         SELECT
-        campaign_group.name,
-        campaign_group.id,
-        customer.descriptive_name
-        FROM campaign_group
-        WHERE
-        campaign_group.status = 'ENABLED'
-        ORDER BY
-        customer.descriptive_name   
+            customer.id,
+            customer.descriptive_name,
+            campaign.id,
+            campaign.name,
+            campaign.advertising_channel_type,
+            campaign.campaign_group,
+            campaign.labels,
+            ad_group.id,
+            ad_group.name,
+            ad_group.type,
+            ad_group.labels
+        FROM ad_group
+        WHERE ad_group.status != 'REMOVED'
+        ORDER BY customer.descriptive_name ASC, campaign.name ASC, ad_group.name ASC
     """
-    camp_group_response = gads_service.search_stream(customer_id=customer_id, query=camp_group_query)
-    # Process campaign group data
-    camp_group_data = {}
-    for batch in camp_group_response:
-        for row in batch.results:
-            camp_group_data[str(row.campaign_group.id)] = row.campaign_group.name
-    # Fetch ad group metrics data
-    metrics_query = f"""
-        SELECT
-        segments.date,
-        customer.descriptive_name,
-        campaign.name,
-        campaign.campaign_group,
-        campaign.labels,
-        ad_group.name,
-        ad_group.labels,
-        ad_group.id,
-        campaign.id,
-        campaign.advertising_channel_type,
-        metrics.cost_micros,
-        metrics.impressions,
-        metrics.clicks,
-        metrics.interactions,
-        metrics.conversions,
-        metrics.conversions_value,
-        customer.id
-        FROM ad_group 
-        WHERE 
-        metrics.clicks > 0
-        AND segments.date BETWEEN '{start_date}' AND '{end_date}'
-        ORDER BY 
-        segments.date ASC,
-        customer.descriptive_name ASC,
-        campaign.name ASC,
-        ad_group.name ASC
-    """
-    # Initialize list
-    table_data = []
-    response = gads_service.search_stream(customer_id=customer_id, query=metrics_query)
-    # Process ad group metrics data
+    response = gads_service.search_stream(customer_id=customer_id, query=audit_query)
+    audit_table = []
+    audit_dict = {}
     for batch in response:
         for row in batch.results:
-            # Transform campaign type
-            channel_type_value = row.campaign.advertising_channel_type
-            channel_type_name = channel_type_enum.AdvertisingChannelType.Name(channel_type_value)
-            # campaign_type = str(row.campaign.advertising_channel_type)
-            # campaign_type = campaign_type if campaign_type in ac.CAMPAIGN_TYPES else 'UNDEFINED'
-            # Transform ad group labels
-            ad_group_label_list = []
-            for label_string in row.ad_group.labels:
-                label_id = label_string.split('/')[-1]
-                label_name = label_data.get(label_id, 'UNDEFINED')
-                ad_group_label_list.append(label_name)
-            # Transform campaign labels
-            campaign_label_list = []
-            for label_string in row.campaign.labels:
-                label_id = label_string.split('/')[-1]
-                label_name = label_data.get(label_id, 'UNDEFINED')
-                campaign_label_list.append(label_name)
-            # Transform campaign group
+            # Decode enum fields
+            channel_type = channel_type_enum.AdvertisingChannelType.Name(
+                row.campaign.advertising_channel_type
+            ) if hasattr(row.campaign, 'advertising_channel_type') else 'UNDEFINED'
+            ad_group_type = ad_group_type_enum.AdGroupType.Name(
+                row.ad_group.type_
+            ) if hasattr(row.ad_group, 'type_') else 'UNDEFINED'
+            # Resolve labels
+            campaign_labels = [
+                label_dict.get(label.split('/')[-1], 'UNDEFINED') for label in row.campaign.labels
+            ]
+            ad_group_labels = [
+                label_dict.get(label.split('/')[-1], 'UNDEFINED') for label in row.ad_group.labels
+            ]
+            # Campaign group name
             campaign_group_id = row.campaign.campaign_group.split('/')[-1]
-            campaign_group_name = camp_group_data.get(campaign_group_id, 'UNDEFINED')
-            # Append data rows, ensure continuity
-            table_data.append([
-                row.segments.date,
+            campaign_group_name = camp_group_dict.get(campaign_group_id, 'UNDEFINED')
+            # Build flat row
+            audit_table.append([
+                row.customer.id,
                 row.customer.descriptive_name,
-                row.campaign.name,
-                campaign_group_name,  # Transformed campaign group name
-                ', '.join(campaign_label_list),  # Combine transformed campaign label names into a single string
-                row.ad_group.name,
-                ', '.join(ad_group_label_list),  # Combine transformed ad group label names into a single string
-                row.ad_group.id,
                 row.campaign.id,
-                channel_type_name,
-                Decimal(row.metrics.cost_micros / 1e6).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP),
-                row.metrics.impressions,
-                row.metrics.clicks,
-                row.metrics.interactions,
-                row.metrics.conversions,
-                row.metrics.conversions_value,
-                row.customer.id
+                row.campaign.name,
+                channel_type,
+                campaign_group_name,
+                ', '.join(campaign_labels),
+                row.ad_group.id,
+                row.ad_group.name,
+                ad_group_type,
+                ', '.join(ad_group_labels)
             ])
-    # Define headers
-    headers = [
-        "date",
-        "property",
+            # Build structured dict
+            audit_dict[(row.campaign.id, row.ad_group.id)] = {
+                "customer_id": row.customer.id,
+                "customer_name": row.customer.descriptive_name,
+                "campaign_id": row.campaign.id,
+                "campaign_name": row.campaign.name,
+                "campaign_type": channel_type,
+                "campaign_group": campaign_group_name,
+                "campaign_labels": campaign_labels,
+                "ad_group_id": row.ad_group.id,
+                "ad_group_name": row.ad_group.name,
+                "ad_group_type": ad_group_type,
+                "ad_group_labels": ad_group_labels,
+            }
+    audit_headers = [
+        "account id",
+        "account name",
+        "campaign id",
         "campaign name",
+        "campaign type",
         "campaign group",
         "campaign labels",
-        "ad_group name",
-        "ad_group labels",
         "ad_group id",
-        "campaign id",
-        "campaign channel_type",
-        "cost",
-        "impressions",
-        "clicks",
-        "interactions",
-        "conversions",
-        "conversions value",
-        "property id"
+        "ad_group name",
+        "ad_group type",
+        "ad_group labels"
     ]
-
-    # Display using tabulate
-    print("NOTICE: Current timeframe displayed is LAST 7 DAYS for testing. ")
-    input("Report ready for viewing. Press ENTER to display results...")
-    pydoc.pager(tabulate(table_data, headers=headers, tablefmt="simple_grid"))
-
-def campaign_group_audit(client, customer_id):
-    gads_service = client.get_service("GoogleAdsService")
-    query = """
-        SELECT
-        campaign_group.name,
-        campaign_group.id,
-        customer.descriptive_name
-        FROM campaign_group
-        WHERE
-        campaign_group.status = 'ENABLED'
-        ORDER BY
-        customer.descriptive_name  
-        """
-    # Initialize an empty list to store the data
-    table_data = []
-    # Fetch data and populate the table_data list
-    response = gads_service.search_stream(customer_id=customer_id, query=query)
-    for data in response:
-        for row in data.results:
-            # Append each row's data as a list or tuple to the table_data list
-            table_data.append([
-                row.customer.descriptive_name,
-                row.campaign_group.name,
-                row.campaign_group.id,
-            ])
-    # Define the headers for the table
-    headers = [
-        "property",
-        "group name",
-        "group id",
-        ]
-    # Display the data using tabulate
-    input("Report ready for viewing. Press ENTER to display results and 'Q' to exit output when done...")
-    pydoc.pager(tabulate(table_data, headers=headers, tablefmt="simple_grid"))
-
-    # fetch campaign_group data
-    camp_group_query = """
-        SELECT
-        campaign_group.name,
-        campaign_group.id,
-        customer.descriptive_name
-        FROM campaign_group
-        WHERE
-        campaign_group.status = 'ENABLED'
-        ORDER BY
-        customer.descriptive_name   
-    """
-    camp_group_response = gads_service.search_stream(customer_id=customer_id, query=camp_group_query)
-    # process label data
-    camp_group_data = {}
-    for data in camp_group_response:
-        for row in data.results:
-            camp_group_data[str(row.campaign_group.id)] = row.campaign_group.name
-
-            # transform campaign labels
-            campaign_group_list = []
-            for camp_group_string in row.campaign.campaign_group:
-                camp_group_id = camp_group_string.split('/')[-1]
-                camp_group_name = camp_group_data.get(camp_group_id, 'UNDEFINED')
-                campaign_group_list.append(camp_group_name)
-
-def label_service(client, customer_id):
-    gads_service = client.get_service("GoogleAdsService")
-    query = """
-        SELECT 
-        label.name, 
-        label.id, 
-        customer.descriptive_name 
-        FROM label
-        WHERE label.status = 'ENABLED'
-        ORDER BY 
-            customer.descriptive_name DESC
-    """
-    response = gads_service.search_stream(customer_id=customer_id, query=query)
-    labels = {}
-    for batch in response:
-        for row in batch.results:
-            label_id = str(row.label.id)  # Ensure label_id is stored as a string
-            label_name = row.label.name
-            labels[label_id] = label_name
-    return labels
+    return audit_table, audit_headers, audit_dict
 
 def get_enums(client):
     """
@@ -443,46 +276,59 @@ def get_enums(client):
     ad_type_enum = client.enums.AdTypeEnum
     return channel_type_enum, ad_group_type_enum, ad_type_enum
 
-def get_labels(client, customer_id):
-    # Fetch label data
+def get_labels(gads_service, client, customer_id):
     label_query = """
         SELECT 
         label.name, 
-        label.id, 
-        customer.descriptive_name 
+        label.id
         FROM label
         WHERE label.status = 'ENABLED'
-        ORDER BY 
-            customer.descriptive_name DESC
+        ORDER BY label.name ASC
     """
-    label_response = client.search_stream(customer_id=customer_id, query=label_query)
-    # process label data
-    label_data = {}
-    for batch in label_response:
-        for row in batch.results:
-            label_data[str(row.label.id)] = row.label.name
-    return label_data
+    label_response = gads_service.search_stream(customer_id=customer_id, query=label_query)
+    label_dict = {}
+    label_table = []
+    for label_data in label_response:
+        for row in label_data.results:
+            label_id = str(row.label.id) # store label_id as a string
+            label_name = row.label.name
+            label_dict[label_id] = label_name
+            label_table.append([
+                label_name,
+                label_id
+            ])
+    label_table_headers = [
+        "Label Name",
+        "Label ID"
+    ]
+    return label_table, label_table_headers, label_dict
 
-def get_campaign_groups(client, customer_id):
-    # fetch campaign group data
+def get_campaign_groups(gads_service, client, customer_id):
     camp_group_query = """
         SELECT
         campaign_group.name,
-        campaign_group.id,
-        customer.descriptive_name
+        campaign_group.id
         FROM campaign_group
-        WHERE
-        campaign_group.status = 'ENABLED'
-        ORDER BY
-        customer.descriptive_name   
+        WHERE campaign_group.status = 'ENABLED'
+        ORDER BY campaign_group.name ASC 
     """
-    camp_group_response = client.search_stream(customer_id=customer_id, query=camp_group_query)
-    # process campaign group data
-    camp_group_data = {}
-    for batch in camp_group_response:
-        for row in batch.results:
-            camp_group_data[str(row.campaign_group.id)] = row.campaign_group.name
-    return camp_group_data
+    camp_group_response = gads_service.search_stream(customer_id=customer_id, query=camp_group_query)
+    camp_group_dict = {}
+    camp_group_table = []
+    for camp_group_data in camp_group_response:
+        for row in camp_group_data.results:
+            camp_group_id = str(row.campaign_group.id) # store campaign_group_id as a string
+            camp_group_name = row.campaign_group.name
+            camp_group_dict[camp_group_id] = camp_group_name
+            camp_group_table.append([
+                camp_group_name,
+                camp_group_id
+            ])
+    camp_group_headers = [
+        "Campaign Group Name",
+        "Campaign Group ID"
+    ]
+    return camp_group_table, camp_group_headers, camp_group_dict
 
 def test_query(gads_service, client, customer_id):
     return

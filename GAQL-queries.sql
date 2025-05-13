@@ -15,15 +15,25 @@ SELECT
 FROM customer
 WHERE segments.date DURING LAST_7_DAYS
 
--- label scope w/o metrics
+-- label scope, ad group+campaign
 SELECT 
-label.name, 
-label.id, 
-customer.descriptive_name 
-FROM label
-WHERE label.status = 'ENABLED'
+  ad_group.id, 
+  ad_group.labels, 
+  label.id, 
+  label.status, 
+  label.name, 
+  ad_group.name, 
+  campaign.id, 
+  campaign.name, 
+  campaign.labels, 
+  customer.id, 
+  customer.descriptive_name 
+FROM ad_group_label 
+WHERE 
+  label.status = 'ENABLED' 
 ORDER BY 
-  customer.descriptive_name DESC
+  ad_group.id ASC, 
+  campaign.id ASC 
 
 -- campaign group w/o metrics
 SELECT

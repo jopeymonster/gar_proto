@@ -150,7 +150,6 @@ def data_handling_options(table_data, headers):
         display_table(table_data, headers)
     else:
         print("Invalid input, please select one of the indicated options.")
-        # exit
         sys.exit(1)
 
 def sanitize_filename(name):

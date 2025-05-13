@@ -55,6 +55,7 @@ def report_menu(gads_service, client, accounts_info):
         "X. Test Query\n"
         "Or type 'exit' at any prompt to quit immediately.\n")
     service_opt = input("Choose 1, 2, 3, 4, etc ('exit' to exit): ").lower()
+    # single property ARC report
     if service_opt == '1':
         print("ARC Sales Report - Single Property selected...")
         prop_info = helpers.get_account_properties(accounts_info)
@@ -85,6 +86,7 @@ def report_menu(gads_service, client, accounts_info):
               f"Execution time: {end_time - start_time:.2f} seconds\n")
         # handle data
         helpers.data_handling_options(table_data, headers)
+    # all properties ARC report
     elif service_opt == '2':
         print("ARC Sales Report - All Properties selected.")
         report_date_details = helpers.get_timerange()
@@ -103,10 +105,19 @@ def report_menu(gads_service, client, accounts_info):
             f"end_date: {end_date}\n")
             # f"time_condition: {time_condition}")
         input("\nPause for debug - press ENTER to continue or input 'exit' to exit")
+
+        # start time
+        start_time = time.time()
         all_prop_data, headers = services.arc_sales_report_all(
             gads_service, client, start_date, end_date, time_seg, accounts_info)
+        end_time = time.time()
+        print(f"Report complied!\n"
+              f"Execution time: {end_time - start_time:.2f} seconds\n")
         # handle data
         helpers.data_handling_options(all_prop_data, headers)
+
+    # elif service_opt == '4':
+        # services.click_view_metrics_report(gads_service, client, customer_id=prop_id)
 
     elif service_opt == 'x':
         services.test_query(gads_service, client, customer_id=prop_id)
@@ -123,67 +134,29 @@ def audit_menu(gads_service, client, accounts_info):
         "Or type 'exit' at any prompt to quit immediately.\n")
     service_opt = input("Choose 1, 2, 3, 4, etc ('exit' to exit): ")
     if service_opt == '1':
+        print("Account Labels Only Audit selected...")
         prop_info = helpers.get_account_properties(accounts_info)
         prop_name, prop_id, prop_url = prop_info
-        # label_service_audit(client, customer_id)
-        services.label_service_audit(gads_service, client, customer_id=prop_id)
+        label_table, label_table_headers, label_dict = services.get_labels(gads_service, client, customer_id=prop_id)
+        # handle data
+        helpers.data_handling_options(label_table, label_table_headers)
     elif service_opt == '2':
+        print("Campaign Group Only Audit selected...")
         prop_info = helpers.get_account_properties(accounts_info)
         prop_name, prop_id, prop_url = prop_info
-        # campaign_group_audit((client, customer_id)
-        services.campaign_group_audit(gads_service, client, customer_id=prop_id)
+        camp_group_table, camp_group_headers, camp_group_dict = services.get_campaign_groups(gads_service, client, customer_id=prop_id)
+        # handle data
+        helpers.data_handling_options(camp_group_table, camp_group_headers)
     elif service_opt == '3':
+        print("Campaign and Ad Group Label Assignments Audit selected...")
         prop_info = helpers.get_account_properties(accounts_info)
         prop_name, prop_id, prop_url = prop_info
-        # date_opt, start_date, end_date, time_seg = _query.get_timerange()
-        report_date_details = helpers.get_timerange()
-        date_opt, start_date, end_date, time_seg = report_date_details
-        # date_opt = report_date_details[0]
-        # time_seg = report_date_details[3]
-        # start_date = report_date_details[1]
-        # end_date = report_date_details[2]
-        date_vars = {}
-        start_string_value = "start"
-        end_string_value = "end"
-        date_vars[start_string_value] = f"'{start_date}'"
-        date_vars[end_string_value] = f"'{end_date}'"
-        """ testing - timeframe transformations, date_opt scope      
-        if date_opt == 'EQUALS': # AD_GROUP_SINGLE
-            time_condition = '='
-            start_date = date_vars["start"]
-        elif date_opt == 'BETWEEN': # AD_GROUP_RANGE
-            time_condition = date_opt
-            start_date = date_vars["start"]
-            end_date = date_vars["end"]
-        elif date_opt == 'DURING': # AD_GROUP_SINGLE
-            start_date = time_seg
-            time_condition = date_opt
-            time_seg = 'date'
-        else:
-            raise ValueError("Improper input or incorrect report date details")
-        """
-        # query testing
-        print("\nServices params passback after get_timerange:\n"
-            f"date_opt: {date_opt}\n"
-            f"time_seg: {time_seg}\n"
-            f"start_date: {start_date}\n"
-            f"end_date: {end_date}\n")
-            # f"time_condition: {time_condition}")
-        input("\nPause for debug - press ENTER to continue or input 'exit' to exit")
-
-        # time_detail = _query.TIME_DETAIL_STRINGS.get(date_opt)
-
-        # debug
-        # print(time_detail)
-        # input("Pause for debug, enter 'exit' to exit or ENTER to continue.")
-
         # execute full report
-        services.complete_labels_audit(gads_service, client, start_date, end_date, time_seg, customer_id=prop_id)
-    # elif service_opt == '4':
-        # services.click_view_metrics_report(gads_service, client, customer_id=prop_id)
+        full_audit_table, full_audit_headers, full_audit_dict = services.complete_labels_audit(gads_service, client, customer_id=prop_id)
+        # handle data
+        helpers.data_handling_options(full_audit_table, full_audit_headers)
     else:
         print("Invalid input, please select one of the indicated options.")
-
 
 @helpers.handle_exceptions
 def main():
