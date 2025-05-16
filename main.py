@@ -5,7 +5,7 @@
 import sys
 import time
 import argparse
-import importlib.util
+import json
 # gads
 from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
@@ -20,10 +20,31 @@ def init_menu(yaml_loc=None, accounts_path=None):
           "NOTE: Enter 'exit' at any prompt will exit this reporting tool.")
     input("Press Enter When Ready...")
     # generate service
-    gads_service, client = auth.generate_services(yaml_loc)
-    # load accounts
-    accounts_info = helpers.load_account_constants(accounts_path)
-    main_menu(gads_service, client, accounts_info)
+    print("Authorization in progress...")
+    gads_service, customer_service, client = auth.generate_services(yaml_loc)
+    print("Authorization complete!\n")
+
+    # test and debug get_acccounts()
+    try:
+        customer_list, account_headers, customer_dict, num_accounts = services.get_accounts(gads_service, customer_service, client)
+        print("\nAccount information retrieved successfully!\n"
+              f"Number of accounts found: {num_accounts}\n")
+        helpers.data_handling_options(table_data=customer_list, headers=account_headers)
+    except GoogleAdsException as ex:
+        print(f"Request with ID '{ex.request_id}' failed with status '{ex.error.code().name}'"
+              f" and includes the following errors:\n")
+        for error in ex.failure.errors:
+            print(f"\tError with message '{error.message}'.")
+            if error.location:
+                for field_path_element in error.location.field_path_elements:
+                    print(f"\t\tOn field: {field_path_element.field_name}")
+    input("\nPause for debug - press ENTER to continue or input 'exit' to exit")
+
+    # check dict
+    print(json.dumps(customer_dict, indent=2))
+    input("\nPause for debug - press ENTER to continue or input 'exit' to exit")
+
+    main_menu(gads_service, client, accounts_info=customer_dict)
 
 def main_menu(gads_service, client, accounts_info):
     print("Main Menu - Select from the options below:\n"
@@ -58,8 +79,8 @@ def report_menu(gads_service, client, accounts_info):
     # single property ARC report
     if service_opt == '1':
         print("ARC Sales Report - Single Property selected...")
-        prop_info = helpers.get_account_properties(accounts_info)
-        prop_name, prop_id, prop_url = prop_info
+        account_info = helpers.get_account_properties(accounts_info)
+        account_id, account_name = account_info
         report_date_details = helpers.get_timerange()
         date_opt, start_date, end_date, time_seg = report_date_details
         date_vars = {}
@@ -80,7 +101,7 @@ def report_menu(gads_service, client, accounts_info):
         # start time
         start_time = time.time()
         table_data, headers = services.arc_sales_report_single(
-            gads_service, client, start_date, end_date, time_seg, customer_id=prop_id)
+            gads_service, client, start_date, end_date, time_seg, customer_id=account_id)
         end_time = time.time()
         print(f"Report complied!\n"
               f"Execution time: {end_time - start_time:.2f} seconds\n")
@@ -108,19 +129,19 @@ def report_menu(gads_service, client, accounts_info):
 
         # start time
         start_time = time.time()
-        all_prop_data, headers = services.arc_sales_report_all(
+        all_account_data, headers = services.arc_sales_report_all(
             gads_service, client, start_date, end_date, time_seg, accounts_info)
         end_time = time.time()
         print(f"Report complied!\n"
               f"Execution time: {end_time - start_time:.2f} seconds\n")
         # handle data
-        helpers.data_handling_options(all_prop_data, headers)
+        helpers.data_handling_options(all_account_data, headers)
 
     # elif service_opt == '4':
-        # services.click_view_metrics_report(gads_service, client, customer_id=prop_id)
+        # services.click_view_metrics_report(gads_service, client, customer_id=account_id)
 
     elif service_opt == 'x':
-        services.test_query(gads_service, client, customer_id=prop_id)
+        services.test_query(gads_service, client, customer_id=account_id)
     else:
         print("Invalid input, please select one of the indicated options.")
         # exit
@@ -135,30 +156,35 @@ def audit_menu(gads_service, client, accounts_info):
     service_opt = input("Choose 1, 2, 3, 4, etc ('exit' to exit): ")
     if service_opt == '1':
         print("Account Labels Only Audit selected...")
-        prop_info = helpers.get_account_properties(accounts_info)
-        prop_name, prop_id, prop_url = prop_info
-        label_table, label_table_headers, label_dict = services.get_labels(gads_service, client, customer_id=prop_id)
+        account_info = helpers.get_account_properties(accounts_info)
+        account_id, account_name = account_info
+
+        # debug
+        print(f"Account ID: {account_id}\n")
+        input("\nPause for debug - press ENTER to continue or input 'exit' to exit")
+
+        label_table, label_table_headers, label_dict = services.get_labels(gads_service, client, customer_id=account_id)
         # handle data
         helpers.data_handling_options(label_table, label_table_headers)
     elif service_opt == '2':
         print("Campaign Group Only Audit selected...")
-        prop_info = helpers.get_account_properties(accounts_info)
-        prop_name, prop_id, prop_url = prop_info
-        camp_group_table, camp_group_headers, camp_group_dict = services.get_campaign_groups(gads_service, client, customer_id=prop_id)
+        account_info = helpers.get_account_properties(accounts_info)
+        account_id, account_name = account_info
+        camp_group_table, camp_group_headers, camp_group_dict = services.get_campaign_groups(gads_service, client, customer_id=account_id)
         # handle data
         helpers.data_handling_options(camp_group_table, camp_group_headers)
     elif service_opt == '3':
         print("Campaign and Ad Group Label Assignments Audit selected...")
-        prop_info = helpers.get_account_properties(accounts_info)
-        prop_name, prop_id, prop_url = prop_info
+        account_info = helpers.get_account_properties(accounts_info)
+        account_id, account_name = account_info
         # execute full report
-        full_audit_table, full_audit_headers, full_audit_dict = services.complete_labels_audit(gads_service, client, customer_id=prop_id)
+        full_audit_table, full_audit_headers, full_audit_dict = services.complete_labels_audit(gads_service, client, customer_id=account_id)
         # handle data
         helpers.data_handling_options(full_audit_table, full_audit_headers)
     else:
         print("Invalid input, please select one of the indicated options.")
 
-@helpers.handle_exceptions
+# @helpers.handle_exceptions
 def main():
     parser = argparse.ArgumentParser(
         prog="GAR",

@@ -6,6 +6,9 @@ from google.ads.googleads.errors import GoogleAdsException
 from google.api_core.exceptions import TooManyRequests, ResourceExhausted
 import helpers
 
+# imports for testing
+import sys
+
 def arc_sales_report_single(gads_service, client, start_date, end_date, time_seg, customer_id):
     """
     Replicates the Google Ads Report Studio by pulling ad performance data
@@ -98,7 +101,7 @@ def arc_sales_report_single(gads_service, client, start_date, end_date, time_seg
 
 def arc_sales_report_all(gads_service, client, start_date, end_date, time_seg, accounts_info):
     """
-    Generates ARC sales report for all accounts listed in prop_info.
+    Generates ARC sales report for all accounts listed in account_info.
 
     Args:
         gads_service: The Google Ads service client.
@@ -106,22 +109,22 @@ def arc_sales_report_all(gads_service, client, start_date, end_date, time_seg, a
         start_date (str): Start date (YYYY-MM-DD).
         end_date (str): End date (YYYY-MM-DD).
         time_seg (str): Time segment or label.
-        prop_info (dict): Dictionary mapping account codes to [customer_id, domain].
+        accounts_info (dict): Dictionary mapping account codes to [customer_id, descriptive_name].
 
     Returns:
         tuple: (sorted_data, headers) for display or export.
     """
     all_data = []
     headers = None
-    for prop_reference, (customer_id, prop_descriptive) in accounts_info.items():
-        print(f"Processing {prop_reference}...")
+    for customer_id, account_descriptive in accounts_info.items():
+        print(f"Processing {account_descriptive}...")
         try:
             table_data, headers = arc_sales_report_single(
                 gads_service, client, start_date, end_date, time_seg, customer_id
             )
             all_data.extend(table_data)
         except Exception as e:
-            print(f"Error processing {prop_reference} ({customer_id}): {e}")
+            print(f"Error processing {account_descriptive} ({customer_id}): {e}")
     if not all_data:
         print("No data returned for any accounts.")
         return [], []
@@ -266,6 +269,58 @@ def complete_labels_audit(gads_service, client, customer_id):
         "ad_group labels"
     ]
     return audit_table, audit_headers, audit_dict
+
+def get_accounts(gads_service, customer_service, client):
+    """
+    Fetches the accounts from the Google Ads API client.
+    """
+    customer_resource_query = """
+        SELECT 
+        customer.id, 
+        customer.descriptive_name 
+        FROM customer
+    """
+    accounts_list = []
+    # placeholder for building dict with account hierarchy
+    customer_dict = {}
+    customer_resources = (
+        customer_service.list_accessible_customers().resource_names
+        )
+    customer_ids = [
+        gads_service.parse_customer_path(customer_resource)["customer_id"] for customer_resource in customer_resources
+        ]
+    
+    # debug
+    print(customer_ids)
+    input("\nPause for debug - press ENTER to continue or input 'exit' to exit")
+
+    """ a better build for customer_dict once testing is complete
+    account_dict = {
+        str(row.customer.id): str(row.customer.descriptive_name)
+        for customer_id in customer_ids
+        for batch in gads_service.search_stream(customer_id=customer_id, query=customer_resource_query)
+        for row in batch.results
+    }
+    """
+
+    for customer_id in customer_ids:
+        customer_response = gads_service.search_stream(
+            customer_id=customer_id, 
+            query=customer_resource_query
+            )
+        for data in customer_response:
+            for row in data.results:
+                accounts_list.append([
+                    row.customer.id,
+                    row.customer.descriptive_name,
+                ])
+                customer_dict[row.customer.id] = row.customer.descriptive_name
+    account_headers = [
+        "account id",
+        "account name"
+    ]
+    account_dict = {str(k): str(v) for k, v in customer_dict.items()} # type protect customer_dict
+    return accounts_list, account_headers, account_dict, len(customer_ids)
 
 def get_enums(client):
     """

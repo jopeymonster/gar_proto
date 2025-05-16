@@ -55,6 +55,7 @@ def generate_services(yaml_loc=None):
     if not client.developer_token:
         print("Google Ads API client is not valid. Please check the file path.")
         sys.exit(1)
-    print(f"yaml loc: {yaml_loc}\n")
+    # print(f"yaml loc: {yaml_loc}\n")
     gads_service = client.get_service("GoogleAdsService")
-    return gads_service, client
+    customer_service = client.get_service("CustomerService")
+    return gads_service, customer_service, client

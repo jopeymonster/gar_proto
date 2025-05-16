@@ -84,33 +84,45 @@ else:
     original_input = __builtins__.input
     __builtins__.input = custom_input
 
-# account/property selection
+# account/account selection
 def get_account_properties(accounts_info):
     """
     Displays a list of available properties and prompts the user to select one.
-
-    Returns:
-        tuple: A tuple containing the selected property name, ID, and URL.
-
-    Source: account_constants_example.py or other (see argparse help for '--accounts')\n
-
-    ACCOUNT_INFO = {\n
-    "Account Reference": ["Account ID", "Description"],\n
-    "EXAMPLE1": ["1234567890", "Example Corp 1 / example.com"],\n
-    "EXAMPLE2": ["0987654321", "Example Corp 2 / example2.com"],\n
-    }\n
-
+    Returns the selected account name and ID.
     """
-    print("Select a property to report on:\n")
-    prop_info = display_prop_list(accounts_info)
-    prop_name, prop_id, prop_url = prop_info
+    print("\nSelect a account to report on:\n")
+    account_info = display_account_list(accounts_info)
+    account_id, account_name = account_info
     # debug constants info
-    print(f"\nSelected prop info:\n"
-          f"prop_name: {prop_name}\n"
-          f"prop_id: {prop_id}\n"
-          f"prop_url: {prop_url}")
+    print(f"Selected prop info:\n"
+          f"account_name: {account_name}\n"
+          f"account_id: {account_id}\n")
     input("Pause for debug...")
-    return prop_info
+    return account_info
+
+def display_account_list(accounts_info):
+    print("\nAvailable Properties:")
+    for i, (values, account_name) in enumerate(accounts_info.items(), start=1):
+        account_id = values
+        print(f"{i}. cID: {account_id} / Name: {account_name}")
+    while True:
+        selection = custom_input("\nSelect a account by number (1, 2, 3, etc) or enter 'exit' to exit: ").strip()
+        if selection.isdigit():
+            selection = int(selection)
+            if 1 <= selection <= len(accounts_info):
+                account_id = list(accounts_info.keys())[selection - 1]
+                account_name = accounts_info[account_id]
+                print(f"\nProp Info: {account_id}, {account_name}")
+                choice = custom_input("Is this correct? (Y/N): ").strip().lower()
+                if choice == "y":
+                    account_info = str(account_id), account_name
+                    return account_info
+                elif choice == "n":
+                    continue
+                else:
+                    print("Invalid input. Please enter 'Y' or 'N'.")
+                    continue
+        print("Invalid selection. Please try again.")
 
 # account constants
 def load_account_constants(path):
@@ -193,31 +205,6 @@ def display_table(table_data, headers):
     """
     input("Report ready for viewing. Press ENTER to display results and 'Q' to exit output when done...")
     pydoc.pager(tabulate(table_data, headers=headers, tablefmt="simple_grid"))
-
-# account/property selection
-def display_prop_list(prop_dict):
-    print("\nAvailable Properties:")
-    for i, (prop_name, values) in enumerate(prop_dict.items(), start=1):
-        prop_id, prop_url = values
-        print(f"{i}. {prop_name} / ID: {prop_id}, URL: {prop_url}")
-    while True:
-        selection = custom_input("\nSelect a property by number (1, 2, 3, etc) or enter 'exit' to exit: ").strip()
-        if selection.isdigit():
-            selection = int(selection)
-            if 1 <= selection <= len(prop_dict):
-                prop_name = list(prop_dict.keys())[selection - 1]
-                prop_id, prop_url = prop_dict[prop_name]
-                print(f"\nProp Info: {prop_name}, {prop_id}, {prop_url}")
-                choice = custom_input("Is this correct? (Y/N): ").strip().lower()
-                if choice == "y":
-                    prop_info = prop_name, prop_id, prop_url
-                    return prop_info
-                elif choice == "n":
-                    continue
-                else:
-                    print("Invalid input. Please enter 'Y' or 'N'.")
-                    continue
-        print("Invalid selection. Please try again.")
 
 def extract_arc(campaign_name):
     """
