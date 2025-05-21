@@ -275,7 +275,7 @@ def get_accounts(gads_service, customer_service, client):
     Fetches the accounts from the Google Ads API client.
     """
     customer_resource_query = """
-        SELECT 
+        SELECT
         customer.id, 
         customer.descriptive_name 
         FROM customer
@@ -289,11 +289,6 @@ def get_accounts(gads_service, customer_service, client):
     customer_ids = [
         gads_service.parse_customer_path(customer_resource)["customer_id"] for customer_resource in customer_resources
         ]
-    
-    # debug
-    print(customer_ids)
-    input("\nPause for debug - press ENTER to continue or input 'exit' to exit")
-
     """ a better build for customer_dict once testing is complete
     account_dict = {
         str(row.customer.id): str(row.customer.descriptive_name)
@@ -302,7 +297,6 @@ def get_accounts(gads_service, customer_service, client):
         for row in batch.results
     }
     """
-
     for customer_id in customer_ids:
         customer_response = gads_service.search_stream(
             customer_id=customer_id, 

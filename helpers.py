@@ -27,6 +27,17 @@ def handle_exceptions(func):
             print("Unable to authenticate or invalid credentials.  Please check your YAML or ACCOUNTS file.")
             print_error(func.__name__, e)
         except GoogleAdsException as e:
+        # GAds specific errors
+            """
+        except GoogleAdsException as ex:
+        print(f"Request with ID '{ex.request_id}' failed with status '{ex.error.code().name}'"
+              f" and includes the following errors:\n")
+        for error in ex.failure.errors:
+            print(f"\tError with message '{error.message}'.")
+            if error.location:
+                for field_path_element in error.location.field_path_elements:
+                    print(f"\t\tOn field: {field_path_element.field_name}")
+        """
             print("Google Ads API error. Please check your credentials and account settings.")
             print_error(func.__name__, e)
         except TooManyRequests as e:
@@ -124,32 +135,15 @@ def display_account_list(accounts_info):
                     continue
         print("Invalid selection. Please try again.")
 
-# account constants
-def load_account_constants(path):
-    """
-    Loads the account constants from the specified path.
-    The path should point to a Python file containing the ACCOUNT_INFO dictionary.
-    """
-    if not path:
-        print("No path provided for account constants file.\n"
-              "Please provide a valid path to the file now....\n")
-        path = input("Enter the path to the ACCOUNTS file (or 'exit' to exit): ").strip()
-        if not path or path.lower() == 'exit':
-            print("No path provided. Exiting...")
-            sys.exit(1)
-    if not os.path.exists(path):
-        print(f"Account constants file not found: {path}")
-        sys.exit(1)
-    # Load the module from the specified path
-    print(f"Loading account constants from: {path}")
-    module_name = os.path.splitext(os.path.basename(path))[0]
-    spec = importlib.util.spec_from_file_location(module_name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module.ACCOUNT_INFO
-
 # data handling
-def data_handling_options(table_data, headers):
+def data_handling_options(table_data, headers, auto_view=False):
+    if auto_view:
+        if not table_data or not headers:
+            print("No data to display.")
+            return
+        # display info automatically
+        display_table(table_data, headers, auto_view=True)
+        return
     print("How would you like to view the report?\n"
             "1. CSV\n"
             "2. Display table on screen\n")
@@ -196,15 +190,18 @@ def save_csv(table_data, headers):
     except Exception as e:
         print(f"\nFailed to save file: {e}\n")
 
-def display_table(table_data, headers):
+def display_table(table_data, headers, auto_view=False):
     """
     Displays a table using the tabulate library.
     Args:
         table_data (list): The data to display in the table.
         headers (list): The headers for the table.
     """
-    input("Report ready for viewing. Press ENTER to display results and 'Q' to exit output when done...")
-    pydoc.pager(tabulate(table_data, headers=headers, tablefmt="simple_grid"))
+    if auto_view:
+        print(tabulate(table_data, headers, tablefmt="simple_grid"))
+    else:
+        input("Report ready for viewing. Press ENTER to display results and 'Q' to exit output when done...")
+        pydoc.pager(tabulate(table_data, headers=headers, tablefmt="simple_grid"))
 
 def extract_arc(campaign_name):
     """

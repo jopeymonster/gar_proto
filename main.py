@@ -15,7 +15,7 @@ import helpers
 import services
 
 # MENUS
-def init_menu(yaml_loc=None, accounts_path=None):
+def init_menu(yaml_loc=None):
     print("\nGoogle Ads Reporter, developed by JDT using GAds API and gRPC\n"
           "NOTE: Enter 'exit' at any prompt will exit this reporting tool.")
     input("Press Enter When Ready...")
@@ -23,13 +23,11 @@ def init_menu(yaml_loc=None, accounts_path=None):
     print("Authorization in progress...")
     gads_service, customer_service, client = auth.generate_services(yaml_loc)
     print("Authorization complete!\n")
-
-    # test and debug get_acccounts()
     try:
         customer_list, account_headers, customer_dict, num_accounts = services.get_accounts(gads_service, customer_service, client)
         print("\nAccount information retrieved successfully!\n"
               f"Number of accounts found: {num_accounts}\n")
-        helpers.data_handling_options(table_data=customer_list, headers=account_headers)
+        helpers.data_handling_options(table_data=customer_list, headers=account_headers, auto_view=True)
     except GoogleAdsException as ex:
         print(f"Request with ID '{ex.request_id}' failed with status '{ex.error.code().name}'"
               f" and includes the following errors:\n")
@@ -38,12 +36,6 @@ def init_menu(yaml_loc=None, accounts_path=None):
             if error.location:
                 for field_path_element in error.location.field_path_elements:
                     print(f"\t\tOn field: {field_path_element.field_name}")
-    input("\nPause for debug - press ENTER to continue or input 'exit' to exit")
-
-    # check dict
-    print(json.dumps(customer_dict, indent=2))
-    input("\nPause for debug - press ENTER to continue or input 'exit' to exit")
-
     main_menu(gads_service, client, accounts_info=customer_dict)
 
 def main_menu(gads_service, client, accounts_info):
@@ -106,7 +98,7 @@ def report_menu(gads_service, client, accounts_info):
         print(f"Report complied!\n"
               f"Execution time: {end_time - start_time:.2f} seconds\n")
         # handle data
-        helpers.data_handling_options(table_data, headers)
+        helpers.data_handling_options(table_data, headers, auto_view=False)
     # all properties ARC report
     elif service_opt == '2':
         print("ARC Sales Report - All Properties selected.")
@@ -135,7 +127,7 @@ def report_menu(gads_service, client, accounts_info):
         print(f"Report complied!\n"
               f"Execution time: {end_time - start_time:.2f} seconds\n")
         # handle data
-        helpers.data_handling_options(all_account_data, headers)
+        helpers.data_handling_options(all_account_data, headers, auto_view=False)
 
     # elif service_opt == '4':
         # services.click_view_metrics_report(gads_service, client, customer_id=account_id)
@@ -165,14 +157,14 @@ def audit_menu(gads_service, client, accounts_info):
 
         label_table, label_table_headers, label_dict = services.get_labels(gads_service, client, customer_id=account_id)
         # handle data
-        helpers.data_handling_options(label_table, label_table_headers)
+        helpers.data_handling_options(label_table, label_table_headers, auto_view=False)
     elif service_opt == '2':
         print("Campaign Group Only Audit selected...")
         account_info = helpers.get_account_properties(accounts_info)
         account_id, account_name = account_info
         camp_group_table, camp_group_headers, camp_group_dict = services.get_campaign_groups(gads_service, client, customer_id=account_id)
         # handle data
-        helpers.data_handling_options(camp_group_table, camp_group_headers)
+        helpers.data_handling_options(camp_group_table, camp_group_headers, auto_view=False)
     elif service_opt == '3':
         print("Campaign and Ad Group Label Assignments Audit selected...")
         account_info = helpers.get_account_properties(accounts_info)
@@ -180,7 +172,7 @@ def audit_menu(gads_service, client, accounts_info):
         # execute full report
         full_audit_table, full_audit_headers, full_audit_dict = services.complete_labels_audit(gads_service, client, customer_id=account_id)
         # handle data
-        helpers.data_handling_options(full_audit_table, full_audit_headers)
+        helpers.data_handling_options(full_audit_table, full_audit_headers, auto_view=False)
     else:
         print("Invalid input, please select one of the indicated options.")
 
@@ -194,23 +186,10 @@ def main():
     )
     parser.add_argument(
         "-y", "--yaml",
-        help="Path to a YAML config file containing OAuth or Service Account credentials. If not provided, the default will be used.",
+        help="Path to a YAML config file containing OAuth or Service Account credentials.",
     )
-    parser.add_argument(
-        "-a", "--accounts",
-        default="account_constants_example.py",
-        help="Path to a account constants file containing 'ACCOUNTS_INFO' dictionary. If not provided, the program will exit.",
-    )
-    args=parser.parse_args()
-    # normal user entry > auth then services
-    accounts_path = None
-    if args.accounts:
-        try: 
-            accounts_path = helpers.load_account_constants(args.accounts)
-        except Exception as e:
-            print(f"Error loading account constants file: {e}")
-            sys.exit(1)
-    init_menu(yaml_loc=args.yaml, accounts_path=args.accounts)
+    args = parser.parse_args()
+    init_menu(yaml_loc=args.yaml)
 
 if __name__ == '__main__':
     main()
