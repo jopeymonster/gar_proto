@@ -1,3 +1,5 @@
+# This file's name needs to be changed to 'google-ads.yaml' after updating the necessary fields below.
+
 # Developer token
 ##########################################################################################
 # A developer token is required when making requests to the Google Ads API regardless of #

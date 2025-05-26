@@ -1,13 +1,159 @@
-import pydoc
-from tabulate import tabulate
+# -*- coding: utf-8 -*-
+import os
+import sys
+import requests
 from decimal import Decimal, ROUND_HALF_UP
 from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
-from google.api_core.exceptions import TooManyRequests, ResourceExhausted
+from google.api_core.exceptions import TooManyRequests, ResourceExhausted, Unauthenticated
 import helpers
 
-# imports for testing
-import sys
+def generate_services(yaml_loc=None):
+    """
+    Authenticates the Google Ads client using the provided YAML file and generates the service for use in API calls.
+    
+    Requires a valid YAML configuration file for Google Ads API authentication.
+    
+    The YAML file should contain the the developer token (required) and one of the following combinations of credentials:
+     - OAuth2 credentials: client ID, client secret, refresh token
+     - Service account credentials: service-account.json file obtain through Google Cloud Project
+
+    The file should be named 'google-ads.yaml' and located in the same directory as the 'main.py' file.
+    The script will check if the YAML file exists and is valid before proceeding.
+    If the YAML file is not found or is invalid, an error message will be printed and the script will exit.
+
+    Args:
+        yaml_loc (str): Optional path to the YAML config file. If None, use default.
+    
+    Returns:
+        gads_service (GoogleAdsService): The Google Ads service object, used for making API calls.
+        client (GoogleAdsClient): The Google Ads client object used for authentication and configuration.
+    """
+    # establish vars
+    if yaml_loc is None:
+        yaml_loc = os.path.join(os.path.dirname(os.path.realpath(__file__)), "google-ads.yaml")
+    # check if yaml file exists
+    if not os.path.exists(yaml_loc):
+        print("The authorization process is incomplete...\n"
+              f"ERROR: {yaml_loc} not found. Please check the file path.")
+        sys.exit(1)
+    else:
+        print(f"Using YAML file: {yaml_loc}\n")
+    try:
+        client = GoogleAdsClient.load_from_storage(yaml_loc)
+    except GoogleAdsException as ex:
+        print(f"Google Ads API error: {ex}")
+        sys.exit(1)
+    # check if client file is valid
+    if not client:
+        print("Google Ads API client is not valid. Please check the file path.")
+        sys.exit(1)
+    if not client.developer_token:
+        print("Google Ads API client is not valid. Please check the file path.")
+        sys.exit(1)
+    # print(f"yaml loc: {yaml_loc}\n")
+    gads_service = client.get_service("GoogleAdsService")
+    customer_service = client.get_service("CustomerService")
+    return gads_service, customer_service, client
+
+def get_accounts(gads_service, customer_service, client):
+    """
+    Fetches subaccounts (non-manager) under the authenticated MCC.
+
+    Returns:
+        tuple: (accounts_list, headers, accounts_dict, number_of_accounts)
+    """
+    customer_client_query = """
+        SELECT
+            customer_client.client_customer,
+            customer_client.level,
+            customer_client.manager,
+            customer_client.descriptive_name,
+            customer_client.id
+        FROM customer_client
+        WHERE customer_client.level <= 10
+        AND customer_client.status = 'ENABLED'
+        AND customer_client.hidden = FALSE
+        ORDER BY customer_client.descriptive_name ASC
+    """
+    mcc_id = str(client.login_customer_id)
+    mcc_response = gads_service.search_stream(customer_id=mcc_id, query=customer_client_query)
+    accounts_list = []
+    accounts_dict = {}
+    for mcc_data in mcc_response:
+        for row in mcc_data.results:
+            if row.customer_client.manager:
+                continue  # skip manager accounts, include only subaccounts
+            account_id = str(row.customer_client.id)
+            account_name = str(row.customer_client.descriptive_name)
+            accounts_list.append([account_id, account_name])
+            accounts_dict[account_id] = account_name
+    headers = ["account id", "account name"]
+    protected_accounts_dict = {str(k): str(v) for k, v in accounts_dict.items()}
+    return accounts_list, headers, protected_accounts_dict, len(protected_accounts_dict)
+
+def get_enums(client):
+    """
+    Fetches the enums for AdvertisingChannelType and AdGroupType from the Google Ads API client.
+    """
+    channel_type_enum = client.enums.AdvertisingChannelTypeEnum
+    ad_group_type_enum = client.enums.AdGroupTypeEnum
+    ad_type_enum = client.enums.AdTypeEnum
+    return channel_type_enum, ad_group_type_enum, ad_type_enum
+
+def get_labels(gads_service, client, customer_id):
+    label_query = """
+        SELECT 
+        label.name, 
+        label.id
+        FROM label
+        WHERE label.status = 'ENABLED'
+        ORDER BY label.name ASC
+    """
+    label_response = gads_service.search_stream(customer_id=customer_id, query=label_query)
+    label_dict = {}
+    label_table = []
+    for label_data in label_response:
+        for row in label_data.results:
+            label_id = str(row.label.id) # store label_id as a string
+            label_name = row.label.name
+            label_dict[label_id] = label_name
+            label_table.append([
+                label_name,
+                label_id
+            ])
+    label_table_headers = [
+        "Label Name",
+        "Label ID"
+    ]
+    return label_table, label_table_headers, label_dict
+
+def get_campaign_groups(gads_service, client, customer_id):
+    camp_group_query = """
+        SELECT
+        campaign_group.name,
+        campaign_group.id
+        FROM campaign_group
+        WHERE campaign_group.status = 'ENABLED'
+        ORDER BY campaign_group.name ASC 
+    """
+    camp_group_response = gads_service.search_stream(customer_id=customer_id, query=camp_group_query)
+    camp_group_dict = {}
+    camp_group_table = []
+    for camp_group_data in camp_group_response:
+        for row in camp_group_data.results:
+            camp_group_id = str(row.campaign_group.id) # store campaign_group_id as a string
+            camp_group_name = row.campaign_group.name
+            camp_group_dict[camp_group_id] = camp_group_name
+            camp_group_table.append([
+                camp_group_name,
+                camp_group_id
+            ])
+    camp_group_headers = [
+        "Campaign Group Name",
+        "Campaign Group ID"
+    ]
+    return camp_group_table, camp_group_headers, camp_group_dict
 
 def arc_sales_report_single(gads_service, client, start_date, end_date, time_seg, customer_id):
     """
@@ -270,114 +416,55 @@ def complete_labels_audit(gads_service, client, customer_id):
     ]
     return audit_table, audit_headers, audit_dict
 
-def get_accounts(gads_service, customer_service, client):
-    """
-    Fetches the accounts from the Google Ads API client.
-    """
-    customer_resource_query = """
-        SELECT
-        customer.id, 
-        customer.descriptive_name 
-        FROM customer
-    """
-    accounts_list = []
-    # placeholder for building dict with account hierarchy
-    customer_dict = {}
-    customer_resources = (
-        customer_service.list_accessible_customers().resource_names
-        )
-    customer_ids = [
-        gads_service.parse_customer_path(customer_resource)["customer_id"] for customer_resource in customer_resources
-        ]
-    """ a better build for customer_dict once testing is complete
-    account_dict = {
-        str(row.customer.id): str(row.customer.descriptive_name)
-        for customer_id in customer_ids
-        for batch in gads_service.search_stream(customer_id=customer_id, query=customer_resource_query)
-        for row in batch.results
-    }
-    """
-    for customer_id in customer_ids:
-        customer_response = gads_service.search_stream(
-            customer_id=customer_id, 
-            query=customer_resource_query
-            )
-        for data in customer_response:
-            for row in data.results:
-                accounts_list.append([
-                    row.customer.id,
-                    row.customer.descriptive_name,
-                ])
-                customer_dict[row.customer.id] = row.customer.descriptive_name
-    account_headers = [
-        "account id",
-        "account name"
-    ]
-    account_dict = {str(k): str(v) for k, v in customer_dict.items()} # type protect customer_dict
-    return accounts_list, account_headers, account_dict, len(customer_ids)
-
-def get_enums(client):
-    """
-    Fetches the enums for AdvertisingChannelType and AdGroupType from the Google Ads API client.
-    """
-    channel_type_enum = client.enums.AdvertisingChannelTypeEnum
-    ad_group_type_enum = client.enums.AdGroupTypeEnum
-    ad_type_enum = client.enums.AdTypeEnum
-    return channel_type_enum, ad_group_type_enum, ad_type_enum
-
-def get_labels(gads_service, client, customer_id):
-    label_query = """
-        SELECT 
-        label.name, 
-        label.id
-        FROM label
-        WHERE label.status = 'ENABLED'
-        ORDER BY label.name ASC
-    """
-    label_response = gads_service.search_stream(customer_id=customer_id, query=label_query)
-    label_dict = {}
-    label_table = []
-    for label_data in label_response:
-        for row in label_data.results:
-            label_id = str(row.label.id) # store label_id as a string
-            label_name = row.label.name
-            label_dict[label_id] = label_name
-            label_table.append([
-                label_name,
-                label_id
-            ])
-    label_table_headers = [
-        "Label Name",
-        "Label ID"
-    ]
-    return label_table, label_table_headers, label_dict
-
-def get_campaign_groups(gads_service, client, customer_id):
-    camp_group_query = """
-        SELECT
-        campaign_group.name,
-        campaign_group.id
-        FROM campaign_group
-        WHERE campaign_group.status = 'ENABLED'
-        ORDER BY campaign_group.name ASC 
-    """
-    camp_group_response = gads_service.search_stream(customer_id=customer_id, query=camp_group_query)
-    camp_group_dict = {}
-    camp_group_table = []
-    for camp_group_data in camp_group_response:
-        for row in camp_group_data.results:
-            camp_group_id = str(row.campaign_group.id) # store campaign_group_id as a string
-            camp_group_name = row.campaign_group.name
-            camp_group_dict[camp_group_id] = camp_group_name
-            camp_group_table.append([
-                camp_group_name,
-                camp_group_id
-            ])
-    camp_group_headers = [
-        "Campaign Group Name",
-        "Campaign Group ID"
-    ]
-    return camp_group_table, camp_group_headers, camp_group_dict
-
 def test_query(gads_service, client, customer_id):
     return
+
+# exceptions wrapper
+def handle_exceptions(func):
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        # GAds specific errors
+        except Unauthenticated as e:
+            print("Unable to authenticate or invalid credentials.  Please check your YAML or SECRETS file.")
+            print_error(func.__name__, e)
+        except GoogleAdsException as ex:
+            print("Google Ads API error encountered: \n"
+                  f"Request with ID '{ex.request_id}' failed with status '{ex.error.code().name}' and includes the following errors:\n")
+            for error in ex.failure.errors:
+                print(f"\tError with message '{error.message}'.")
+                if error.location:
+                    for field_path_element in error.location.field_path_elements:
+                        print(f"\t\tOn field: {field_path_element.field_name}")
+        except TooManyRequests as e:
+            print("Too many requests. API quota may have been reached or accessed too quickly. Please try again later.")
+            print_error(func.__name__, e)
+        except ResourceExhausted as e:
+            print("Resource exhausted. API quota may have been reached or accessed too quickly. Please try again later.")
+            print_error(func.__name__, e)
+        # generic requests exceptions
+        except requests.exceptions.RequestException as e:
+            print_error(func.__name__, e)
+        # other exceptions
+        except KeyboardInterrupt:
+            print("\nExiting the program...")
+            sys.exit(0)
+        except EOFError as e:
+            print_error(func.__name__, e)
+        except OSError as e:
+            print_error(func.__name__, e)
+        except TypeError as e:
+            print_error(func.__name__, e)
+        except ValueError as e:
+            print_error(func.__name__, e)
+        except KeyboardInterrupt as e:
+            print_error(func.__name__, e)
+        except FileNotFoundError as e:
+            print_error(func.__name__, e)
+        except AttributeError as e:
+            print_error(func.__name__, )
+        except Exception as e:
+            print_error(func.__name__, e)
+    def print_error(func_name, error):
+        print(f"\nError in function '{func_name}': {repr(error)} - Exiting...\n")
+    return wrapper

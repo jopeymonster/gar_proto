@@ -1,16 +1,7 @@
 # -*- coding: utf-8 -*-
-
-# IMPORTS
-# standard
 import sys
 import time
 import argparse
-import json
-# gads
-from google.ads.googleads.client import GoogleAdsClient
-from google.ads.googleads.errors import GoogleAdsException
-# helpers
-import auth
 import helpers
 import services
 
@@ -21,21 +12,12 @@ def init_menu(yaml_loc=None):
     input("Press Enter When Ready...")
     # generate service
     print("Authorization in progress...")
-    gads_service, customer_service, client = auth.generate_services(yaml_loc)
+    gads_service, customer_service, client = services.generate_services(yaml_loc)
     print("Authorization complete!\n")
-    try:
-        customer_list, account_headers, customer_dict, num_accounts = services.get_accounts(gads_service, customer_service, client)
-        print("\nAccount information retrieved successfully!\n"
-              f"Number of accounts found: {num_accounts}\n")
-        helpers.data_handling_options(table_data=customer_list, headers=account_headers, auto_view=True)
-    except GoogleAdsException as ex:
-        print(f"Request with ID '{ex.request_id}' failed with status '{ex.error.code().name}'"
-              f" and includes the following errors:\n")
-        for error in ex.failure.errors:
-            print(f"\tError with message '{error.message}'.")
-            if error.location:
-                for field_path_element in error.location.field_path_elements:
-                    print(f"\t\tOn field: {field_path_element.field_name}")
+    customer_list, account_headers, customer_dict, num_accounts = services.get_accounts(gads_service, customer_service, client)
+    print("\nAccount information retrieved successfully!\n"
+            f"Number of accounts found: {num_accounts}\n")
+    helpers.data_handling_options(table_data=customer_list, headers=account_headers, auto_view=True)
     main_menu(gads_service, client, accounts_info=customer_dict)
 
 def main_menu(gads_service, client, accounts_info):
@@ -176,7 +158,7 @@ def audit_menu(gads_service, client, accounts_info):
     else:
         print("Invalid input, please select one of the indicated options.")
 
-# @helpers.handle_exceptions
+@services.handle_exceptions
 def main():
     parser = argparse.ArgumentParser(
         prog="GAR",

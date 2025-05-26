@@ -12,6 +12,16 @@ old/
 authfiles/
 systools/
 
+# auth files
+*secret*
+*authorization*
+*cred*
+
+# Google
+*google-ads.yaml
+*service-account.json
+*client-secret.json
+
 # macOS
 .DS_Store
 .DS_Store?

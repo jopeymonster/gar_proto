@@ -203,3 +203,20 @@ ORDER BY
   customer.descriptive_name ASC, 
   campaign.name ASC, 
   ad_group.name ASC
+
+-- customer_resource_query, sub accounts scope
+    SELECT
+    customer.id, 
+    customer.descriptive_name 
+    FROM customer
+
+-- customer_client_query, mcc accounts scope
+    SELECT
+    customer_client.client_customer,
+    customer_client.level,
+    customer_client.manager,
+    customer_client.descriptive_name,
+    customer_client.id
+    FROM customer_client
+    WHERE customer_client.level <= 10
+"""
