@@ -19,7 +19,13 @@ The script will check if the YAML file exists and is valid before proceeding.
 If the YAML file is not found or is invalid, an error message will be printed and the script will exit.
 
 ## Usage
-Coming Soon!
+This app supports ingestion of a different YAML file using argparse:
+"-y", "--yaml"
+
+EXAMPLE:
+python main.py /path/to/google-ads.yaml
+
+Ensure the path to your JSON authorization file (client-secrets/service-account) is present in the YAML.
 
 ## License
 This project is licensed under the [MIT License](LICENSE).
