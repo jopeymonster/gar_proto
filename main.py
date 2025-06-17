@@ -14,6 +14,8 @@ def init_menu(yaml_loc=None):
     print("Authorization in progress...")
     gads_service, customer_service, client = services.generate_services(yaml_loc)
     print("Authorization complete!\n")
+    print("Retrieving account information...")
+    # get accounts
     customer_list, account_headers, customer_dict, num_accounts = services.get_accounts(gads_service, customer_service, client)
     print("\nAccount information retrieved successfully!\n"
             f"Number of accounts found: {num_accounts}\n")
@@ -23,7 +25,8 @@ def init_menu(yaml_loc=None):
 def main_menu(gads_service, client, accounts_info):
     print("Main Menu - Select from the options below:\n"
           "1. ARC Reporting\n"
-          "2. Auditing\n")
+          "2. Auditing\n"
+          "3. Budget Reporting\n")
     data_scope = input("Choose a numbered option (1, 2, etc or 'exit' to exit): ")
     if data_scope == '1':
         print("ARC Reporting selected.")
@@ -31,6 +34,9 @@ def main_menu(gads_service, client, accounts_info):
     elif data_scope == '2':
         print("Auditing selected.")
         audit_menu(gads_service, client, accounts_info)
+    elif data_scope == '3':
+        print("Budget Reporting selected.")
+        budget_menu(gads_service, client, accounts_info)
     else:
         print("Invalid input, please select one of the indicated numbered options.")
         # exit
@@ -157,6 +163,12 @@ def audit_menu(gads_service, client, accounts_info):
         helpers.data_handling_options(full_audit_table, full_audit_headers, auto_view=False)
     else:
         print("Invalid input, please select one of the indicated options.")
+
+def budget_menu(gads_service, client, accounts_info):
+    print("Budget Options:\n"
+          "1. Budget Report - Single Property\n"
+          "2. Budget Report - All Properties\n"
+          "Or type 'exit' at any prompt to quit immediately.\n")
 
 @services.handle_exceptions
 def main():
