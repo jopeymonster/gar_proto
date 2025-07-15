@@ -158,11 +158,13 @@ def get_campaign_groups(gads_service, client, customer_id):
 def arc_sales_report_single(gads_service, client, start_date, end_date, time_seg, customer_id):
     """
     Replicates the Google Ads Report Studio by pulling ad performance data
-    with ad group and ad types using ad_group_ad as the main resource.
+    with ad group and ad types using ad_group_ad as the main resource,
+    and campaign-level data for Performance Max.
     """
-    # Enum decoders
+    # enum decoders
     channel_type_enum, ad_group_type_enum, ad_type_enum = get_enums(client)
-    query = f"""
+    # ad_group_ad scoped query for standard campaigns
+    query_ad_group = f"""
         SELECT
             segments.date,
             customer.id,
@@ -185,15 +187,14 @@ def arc_sales_report_single(gads_service, client, start_date, end_date, time_seg
         WHERE segments.date BETWEEN '{start_date}' AND '{end_date}'
         ORDER BY segments.date ASC, campaign.name ASC
     """
-    response = gads_service.search_stream(customer_id=customer_id, query=query)
+    response_ad_group = gads_service.search_stream(customer_id=customer_id, query=query_ad_group)
     table_data = []
-    for batch in response:
+    for batch in response_ad_group:
         for row in batch.results:
-            # ENUM decoding with fallbacks
             arc = helpers.extract_arc(row.campaign.name)
             channel_type = (
                 channel_type_enum.AdvertisingChannelType.Name(row.campaign.advertising_channel_type)
-                if hasattr(row.campaign, 'advertising_channel_type') else 'UNDEFINED'               
+                if hasattr(row.campaign, 'advertising_channel_type') else 'UNDEFINED'
             )
             ad_group_type = (
                 ad_group_type_enum.AdGroupType.Name(row.ad_group.type_)
@@ -216,6 +217,58 @@ def arc_sales_report_single(gads_service, client, start_date, end_date, time_seg
                 ad_group_type,
                 row.ad_group_ad.ad.id,
                 ad_type,
+                Decimal(row.metrics.cost_micros / 1e6).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+                row.metrics.impressions,
+                row.metrics.clicks,
+                row.metrics.video_views,
+                row.metrics.conversions,
+                row.metrics.conversions_value,
+            ])
+    # campaign scoped query for pmax campaigns
+    query_campaign = f"""
+        SELECT
+            segments.date,
+            customer.id,
+            customer.descriptive_name,
+            campaign.id,
+            campaign.name,
+            campaign.advertising_channel_type,
+            metrics.cost_micros,
+            metrics.impressions,
+            metrics.clicks,
+            metrics.video_views,
+            metrics.conversions,
+            metrics.conversions_value
+        FROM campaign
+        WHERE segments.date BETWEEN '{start_date}' AND '{end_date}'
+        AND campaign.advertising_channel_type = 'PERFORMANCE_MAX'
+        ORDER BY segments.date ASC, campaign.name ASC
+    """
+    response_campaign = gads_service.search_stream(customer_id=customer_id, query=query_campaign)
+    for batch in response_campaign:
+        for row in batch.results:
+            # ENUM decoding with fallbacks
+            arc = helpers.extract_arc(row.campaign.name)
+            channel_type = (
+                channel_type_enum.AdvertisingChannelType.Name(row.campaign.advertising_channel_type)
+                if hasattr(row.campaign, 'advertising_channel_type') else 'UNDEFINED'
+            )
+            # insert values for pmax ad group & ad info
+            pmax_camp_id = row.campaign.id
+            pmax_camp_name = row.campaign.name
+            table_data.append([
+                row.segments.date,
+                row.customer.id,
+                row.customer.descriptive_name,
+                arc,
+                row.campaign.id,
+                row.campaign.name,
+                channel_type,
+                pmax_camp_id,       # pmax ad_group.id placeholder
+                pmax_camp_name,     # pmax ad_group.name placeholder
+                "PMAX", # pmax ad_group.type
+                pmax_camp_id,       # pmax ad id placeholder
+                "PMAX", # pmax ad type
                 Decimal(row.metrics.cost_micros / 1e6).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
                 row.metrics.impressions,
                 row.metrics.clicks,
