@@ -163,10 +163,12 @@ def arc_sales_report_single(gads_service, client, start_date, end_date, time_seg
     """
     # enum decoders
     channel_type_enum, ad_group_type_enum, ad_type_enum = get_enums(client)
+    # time_seg transform
+    time_seg_string = f'segments.{time_seg}'
     # ad_group_ad scoped query for standard campaigns
     query_ad_group = f"""
         SELECT
-            segments.date,
+            {time_seg_string},
             customer.id,
             customer.descriptive_name,
             campaign.id,
@@ -185,7 +187,7 @@ def arc_sales_report_single(gads_service, client, start_date, end_date, time_seg
             metrics.conversions_value
         FROM ad_group_ad
         WHERE segments.date BETWEEN '{start_date}' AND '{end_date}'
-        ORDER BY segments.date ASC, campaign.name ASC
+        ORDER BY {time_seg_string} ASC, campaign.name ASC
     """
     response_ad_group = gads_service.search_stream(customer_id=customer_id, query=query_ad_group)
     table_data = []
@@ -204,8 +206,9 @@ def arc_sales_report_single(gads_service, client, start_date, end_date, time_seg
                 ad_type_enum.AdType.Name(row.ad_group_ad.ad.type_)
                 if hasattr(row.ad_group_ad.ad, 'type_') else 'UNDEFINED'
             )
+            date_value = getattr(row.segments, time_seg)
             table_data.append([
-                row.segments.date,
+                date_value,
                 row.customer.id,
                 row.customer.descriptive_name,
                 arc,
@@ -227,7 +230,7 @@ def arc_sales_report_single(gads_service, client, start_date, end_date, time_seg
     # campaign scoped query for pmax campaigns
     query_campaign = f"""
         SELECT
-            segments.date,
+            {time_seg_string},
             customer.id,
             customer.descriptive_name,
             campaign.id,
@@ -242,7 +245,7 @@ def arc_sales_report_single(gads_service, client, start_date, end_date, time_seg
         FROM campaign
         WHERE segments.date BETWEEN '{start_date}' AND '{end_date}'
         AND campaign.advertising_channel_type = 'PERFORMANCE_MAX'
-        ORDER BY segments.date ASC, campaign.name ASC
+        ORDER BY {time_seg_string} ASC, campaign.name ASC
     """
     response_campaign = gads_service.search_stream(customer_id=customer_id, query=query_campaign)
     for batch in response_campaign:
@@ -256,8 +259,9 @@ def arc_sales_report_single(gads_service, client, start_date, end_date, time_seg
             # insert values for pmax ad group & ad info
             pmax_camp_id = row.campaign.id
             pmax_camp_name = row.campaign.name
+            date_value = getattr(row.segments, time_seg)
             table_data.append([
-                row.segments.date,
+                date_value,
                 row.customer.id,
                 row.customer.descriptive_name,
                 arc,
@@ -277,7 +281,7 @@ def arc_sales_report_single(gads_service, client, start_date, end_date, time_seg
                 row.metrics.conversions_value,
             ])
     headers = [
-        "Day",
+        "Date",
         "Customer ID",
         "Account name",
         "ARC",
@@ -469,8 +473,10 @@ def complete_labels_audit(gads_service, client, customer_id):
     ]
     return audit_table, audit_headers, audit_dict
 
+"""
 def test_query(gads_service, client, customer_id):
     return
+"""
 
 # exceptions wrapper
 def handle_exceptions(func):

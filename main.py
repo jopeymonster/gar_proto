@@ -46,13 +46,7 @@ def report_menu(gads_service, client, accounts_info):
     print("Reporting Options:\n"
         "1. ARC Sales Report - Single Property\n"
         "2. ARC Sales Report - All Properties\n"
-        # "3. ARC Sales Report - US Properties\n"
-        # "4. ARC Sales Report - EU Properties\n"
-        # "5. ARC Sales Report - AU Properties\n"
-        # "6. ARC Sales Report - TW Properties\n"
-        # "7. ARC Sales Report - RW Properties\n"
-        # "8. ARC Sales Report - PKW Properties\n"
-        # "9. ARC Sales Report - PAD Properties\n"
+        "0. Accounts Report - All Properties, previous calendar month\n"
         "X. Test Query\n"
         "Or type 'exit' at any prompt to quit immediately.\n")
     service_opt = input("Choose 1, 2, 3, 4, etc ('exit' to exit): ").lower()
@@ -63,11 +57,13 @@ def report_menu(gads_service, client, accounts_info):
         account_id, account_name = account_info
         report_date_details = helpers.get_timerange()
         date_opt, start_date, end_date, time_seg = report_date_details
+        """        
         date_vars = {}
         start_string_value = "start"
         end_string_value = "end"
         date_vars[start_string_value] = f"'{start_date}'"
         date_vars[end_string_value] = f"'{end_date}'"
+        """
 
         # debug
         print("\nServices params passback after get_timerange:\n"
@@ -92,12 +88,42 @@ def report_menu(gads_service, client, accounts_info):
         print("ARC Sales Report - All Properties selected.")
         report_date_details = helpers.get_timerange()
         date_opt, start_date, end_date, time_seg = report_date_details
+        """        
         date_vars = {}
         start_string_value = "start"
         end_string_value = "end"
         date_vars[start_string_value] = f"'{start_date}'"
         date_vars[end_string_value] = f"'{end_date}'"
+        """
+        # query testing
+        print("\nServices params passback after get_timerange:\n"
+            f"date_opt: {date_opt}\n"
+            f"time_seg: {time_seg}\n"
+            f"start_date: {start_date}\n"
+            f"end_date: {end_date}\n")
+            # f"time_condition: {time_condition}")
+        input("\nPause for debug - press ENTER to continue or input 'exit' to exit")
 
+        # start time
+        start_time = time.time()
+        all_account_data, headers = services.arc_sales_report_all(
+            gads_service, client, start_date, end_date, time_seg, accounts_info)
+        end_time = time.time()
+        print(f"Report complied!\n"
+              f"Execution time: {end_time - start_time:.2f} seconds\n")
+        # handle data
+        helpers.data_handling_options(all_account_data, headers, auto_view=False)
+    elif service_opt == '0':
+        print("Monthly Accounts Report - All Properties, previous calendar month.")
+        report_date_details = helpers.get_last_calendar_month()
+        date_opt, start_date, end_date, time_seg = report_date_details
+        """        
+        date_vars = {}
+        start_string_value = "start"
+        end_string_value = "end"
+        date_vars[start_string_value] = f"'{start_date}'"
+        date_vars[end_string_value] = f"'{end_date}'"
+        """
         # query testing
         print("\nServices params passback after get_timerange:\n"
             f"date_opt: {date_opt}\n"

@@ -3,7 +3,7 @@ import csv
 import sys
 import re
 import pydoc
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from pathlib import Path
 from tabulate import tabulate
 
@@ -156,7 +156,7 @@ def extract_arc(campaign_name):
 
 def get_timerange():
     while True:
-        print("Search for:\n"
+        print("Reporting time range:\n"
               "1. Specific date\n"
               "2. Range of dates\n")
         date_opt_input = input("Enter 1 or 2: ")
@@ -166,34 +166,93 @@ def get_timerange():
             start_date = spec_date
             end_date = spec_date
             time_seg = 'date'  # time_reg day options as below
+            print("Single date option selected, default time segmentation to 'date'.")
             return date_opt, start_date, end_date, time_seg
         elif date_opt_input == '2':
             date_opt = 'Date range'
-            start_date_input = input("Start Date (YYYY-MM-DD): ")
-            end_date_input = input("End Date (YYYY-MM-DD): ")
-            # placeholders if needing to convert input
-            start_date = start_date_input
-            end_date = end_date_input
-            time_seg = 'date'
-            return date_opt, start_date, end_date, time_seg
-            """ # needs work        
+            start_date = input("Start Date (YYYY-MM-DD): ")
+            end_date = input("End Date (YYYY-MM-DD): ")
             while True:
-                print("Select a time segmentation for your requested date range: \n"
-                      "1. Day\n"
-                      "2. Week\n"
-                      "3. Month\n"
-                      "4. Quarter\n"
-                      "5. Year")
-                time_seg_input = input("Select one of the options (1-5) from above: ")
-                if time_seg_input not in ['1', '2', '3', '4', '5']:
-                    print("Invalid option, please choose from one of the provided options.")
-                else:
-                    # transform time_seg
-                    time_seg_options = {'1': 'day', '2': 'week', '3': 'month', '4': 'quarter', '5': 'year'}
-                    time_seg = time_seg_options.get(time_seg_input)
-                    if time_seg is None:
-                        raise ValueError("Invalid time segmentation option provided.")
+                print("Date range segmentation:\n"
+                    "1. Day\n"
+                    "2. Week\n"
+                    "3. Month\n"
+                    "4. Quarter\n"
+                    "5. Year\n")
+                time_seg_input = input("Select from one of the above numbered options (1, 2, 3, etc): ")
+                # transform time_seg
+                time_seg_options = {'1': 'day', '2': 'week', '3': 'month', '4': 'quarter', '5': 'year'}
+                time_seg = time_seg_options.get(time_seg_input)
+                if time_seg:
                     return date_opt, start_date, end_date, time_seg
-                    """
+                else:
+                    print("Invalid time segmentation option provided.")
         else:
-            print("Invalid option")
+            print("Invalid option, please enter 1 or 2.")
+
+def get_last30days():
+    today_actual = date.today()
+    start_date = today_actual-timedelta(days=30)
+    end_date = today_actual-timedelta(days=1)
+    time_seg = 'date'
+    date_opt = 'Date range'
+    return date_opt, start_date, end_date, time_seg
+
+def get_last_calendar_month():
+    today_actual = date.today()
+    first_of_this_month = today_actual.replace(day=1)
+    last_day_prev_month = first_of_this_month - timedelta(days=1) # end_date
+    first_day_prev_month = last_day_prev_month.replace(day=1) # start_date
+    date_opt = "Last calendar month"
+    time_seg = "month"
+    return date_opt, first_day_prev_month, last_day_prev_month, time_seg
+
+def get_quarter_dates(year: int, quarter: int):
+    """
+    Return the start and end dates for a given year and quarter (1 - 4).
+    The initial dates are static to allow quarter boundries to be altered in the future of needed.
+    """
+    if quarter not in (1, 2, 3, 4):
+        raise ValueError("Quarter must be between 1 and 4")
+    if quarter == 1:
+        start_date = date(year, 1, 1)
+        end_date = date(year, 3, 31)
+    elif quarter == 2:
+        start_date = date(year, 4, 1)
+        end_date = date(year, 6, 30)
+    elif quarter == 3:
+        start_date = date(year, 7, 1)
+        end_date = date(year, 9, 30)
+    else:  # Q4
+        start_date = date(year, 10, 1)
+        end_date = date(year, 12, 31)
+    return start_date, end_date
+
+def get_current_quarter_to_date():
+    today_actual = date.today()
+    year = today_actual.year
+    month = today_actual.month
+    current_quarter = (month - 1) // 3 + 1
+    q_start, _ = get_quarter_dates(year, current_quarter)
+    # quarter-to-date runs through yesterday
+    start_date = q_start
+    end_date = today_actual - timedelta(days=1)
+    date_opt = "Date range"
+    time_seg = "quarter"
+    return date_opt, start_date, end_date, time_seg
+
+def get_previous_calendar_quarter():
+    today_actual = date.today()
+    year = today_actual.year
+    month = today_actual.month
+    current_quarter = (month - 1) // 3 + 1
+    # determine year/quarter
+    if current_quarter == 1:
+        prev_quarter = 4
+        year -= 1
+    else:
+        prev_quarter = current_quarter - 1
+    start_date, end_date = get_quarter_dates(year, prev_quarter)
+    date_opt = "Date range"
+    time_seg = "quarter"
+    return date_opt, start_date, end_date, time_seg
