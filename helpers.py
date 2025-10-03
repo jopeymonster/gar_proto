@@ -181,7 +181,7 @@ def get_timerange():
                     "5. Year\n")
                 time_seg_input = input("Select from one of the above numbered options (1, 2, 3, etc): ")
                 # transform time_seg
-                time_seg_options = {'1': 'day', '2': 'week', '3': 'month', '4': 'quarter', '5': 'year'}
+                time_seg_options = {'1': 'date', '2': 'week', '3': 'month', '4': 'quarter', '5': 'year'}
                 time_seg = time_seg_options.get(time_seg_input)
                 if time_seg:
                     return date_opt, start_date, end_date, time_seg

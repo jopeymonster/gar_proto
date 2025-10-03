@@ -24,8 +24,8 @@ def init_menu(yaml_loc=None):
 
 def main_menu(gads_service, client, accounts_info):
     print("Main Menu - Select from the options below:\n"
-          "1. ARC Reporting\n"
-          "2. Auditing\n"
+          "1. Performance Reporting\n"
+          "2. Account Auditing\n"
           "3. Budget Reporting\n")
     data_scope = input("Choose a numbered option (1, 2, etc or 'exit' to exit): ")
     if data_scope == '1':
@@ -44,17 +44,20 @@ def main_menu(gads_service, client, accounts_info):
 
 def report_menu(gads_service, client, accounts_info):
     print("Reporting Options:\n"
-        "1. ARC Sales Report - Single Property\n"
-        "2. ARC Sales Report - All Properties\n"
-        "0. Accounts Report - All Properties, previous calendar month\n"
-        "X. Test Query\n"
+        "1. ARC Report - Single Property\n"
+        "2. ARC Report - All Properties\n"
+        "3. Account Report - Single Property\n"
+        "4. Account Report - All Properties\n"
+        "5. Ads Report - Single Property\n"
+        "6. Ads Report - All Properties\n"
+        # "X. Test Query\n"
         "Or type 'exit' at any prompt to quit immediately.\n")
     service_opt = input("Choose 1, 2, 3, 4, etc ('exit' to exit): ").lower()
     # single property ARC report
     if service_opt == '1':
         print("ARC Sales Report - Single Property selected...")
-        account_info = helpers.get_account_properties(accounts_info)
-        account_id, account_name = account_info
+        account_info = helpers.get_account_properties(accounts_info) # parse single account info
+        account_id, account_name = account_info # parse single accountID
         report_date_details = helpers.get_timerange()
         date_opt, start_date, end_date, time_seg = report_date_details
         """        
@@ -77,9 +80,9 @@ def report_menu(gads_service, client, accounts_info):
         # start time
         start_time = time.time()
         table_data, headers = services.arc_sales_report_single(
-            gads_service, client, start_date, end_date, time_seg, customer_id=account_id)
+            gads_service, client, start_date, end_date, time_seg, customer_id=account_id) # pass single accountID
         end_time = time.time()
-        print(f"Report complied!\n"
+        print(f"Report compiled!\n"
               f"Execution time: {end_time - start_time:.2f} seconds\n")
         # handle data
         helpers.data_handling_options(table_data, headers, auto_view=False)
@@ -107,15 +110,17 @@ def report_menu(gads_service, client, accounts_info):
         # start time
         start_time = time.time()
         all_account_data, headers = services.arc_sales_report_all(
-            gads_service, client, start_date, end_date, time_seg, accounts_info)
+            gads_service, client, start_date, end_date, time_seg, accounts_info) # pass all accounts
         end_time = time.time()
-        print(f"Report complied!\n"
+        print(f"Report compiled!\n"
               f"Execution time: {end_time - start_time:.2f} seconds\n")
         # handle data
         helpers.data_handling_options(all_account_data, headers, auto_view=False)
-    elif service_opt == '0':
-        print("Monthly Accounts Report - All Properties, previous calendar month.")
-        report_date_details = helpers.get_last_calendar_month()
+    elif service_opt == '3':
+        print("Accounts Report - Single Property selected...")
+        account_info = helpers.get_account_properties(accounts_info)
+        account_id, account_name = account_info
+        report_date_details = helpers.get_timerange()
         date_opt, start_date, end_date, time_seg = report_date_details
         """        
         date_vars = {}
@@ -135,15 +140,90 @@ def report_menu(gads_service, client, accounts_info):
 
         # start time
         start_time = time.time()
-        all_account_data, headers = services.arc_sales_report_all(
+        all_account_data, headers = services.account_report_single(
             gads_service, client, start_date, end_date, time_seg, accounts_info)
         end_time = time.time()
-        print(f"Report complied!\n"
+        print(f"Report compiled!\n"
+              f"Execution time: {end_time - start_time:.2f} seconds\n")
+        # handle data
+        helpers.data_handling_options(all_account_data, headers, auto_view=False)
+    elif service_opt == '4':
+        print("Accounts Report - All Properties selected.")
+        report_date_details = helpers.get_timerange()
+        date_opt, start_date, end_date, time_seg = report_date_details
+        """        
+        date_vars = {}
+        start_string_value = "start"
+        end_string_value = "end"
+        date_vars[start_string_value] = f"'{start_date}'"
+        date_vars[end_string_value] = f"'{end_date}'"
+        """
+        # query testing
+        print("\nServices params passback after get_timerange:\n"
+            f"date_opt: {date_opt}\n"
+            f"time_seg: {time_seg}\n"
+            f"start_date: {start_date}\n"
+            f"end_date: {end_date}\n")
+            # f"time_condition: {time_condition}")
+        input("\nPause for debug - press ENTER to continue or input 'exit' to exit")
+
+        # start time
+        start_time = time.time()
+        all_account_data, headers = services.account_report_all(
+            gads_service, client, start_date, end_date, time_seg, accounts_info)
+        end_time = time.time()
+        print(f"Report compiled!\n"
+              f"Execution time: {end_time - start_time:.2f} seconds\n")
+        # handle data
+        helpers.data_handling_options(all_account_data, headers, auto_view=False)
+    elif service_opt =='5':
+        print("Ads Report - Single Property selected.")
+        account_info = helpers.get_account_properties(accounts_info) # parse single account info
+        account_id, account_name = account_info # parse accountID
+        report_date_details = helpers.get_timerange()
+        date_opt, start_date, end_date, time_seg = report_date_details
+
+        # query testing
+        print("\nServices params passback after get_timerange:\n"
+            f"date_opt: {date_opt}\n"
+            f"time_seg: {time_seg}\n"
+            f"start_date: {start_date}\n"
+            f"end_date: {end_date}\n")
+            # f"time_condition: {time_condition}")
+        input("\nPause for debug - press ENTER to continue or input 'exit' to exit")
+        
+        start_time = time.time()
+        all_account_data, headers = services.ad_level_report_single(
+            gads_service, client, start_date, end_date, time_seg, customer_id=account_id) # pass single accountID
+        end_time = time.time()
+        print(f"Report compiled!\n"
+              f"Execution time: {end_time - start_time:.2f} seconds\n")
+        # handle data
+        helpers.data_handling_options(all_account_data, headers, auto_view=False)
+    elif service_opt == '6':
+        print("Ads Report - All Properties selected.")
+        report_date_details = helpers.get_timerange()
+        date_opt, start_date, end_date, time_seg = report_date_details
+
+        # query testing
+        print("\nServices params passback after get_timerange:\n"
+            f"date_opt: {date_opt}\n"
+            f"time_seg: {time_seg}\n"
+            f"start_date: {start_date}\n"
+            f"end_date: {end_date}\n")
+            # f"time_condition: {time_condition}")
+        input("\nPause for debug - press ENTER to continue or input 'exit' to exit")
+
+        start_time = time.time()
+        all_account_data, headers = services.ad_level_report_all(
+            gads_service, client, start_date, end_date, time_seg, accounts_info) # pass all accounts
+        end_time = time.time()
+        print(f"Report compiled!\n"
               f"Execution time: {end_time - start_time:.2f} seconds\n")
         # handle data
         helpers.data_handling_options(all_account_data, headers, auto_view=False)
 
-    # elif service_opt == '4':
+    # elif service_opt == '0':
         # services.click_view_metrics_report(gads_service, client, customer_id=account_id)
 
     elif service_opt == 'x':
@@ -196,7 +276,7 @@ def budget_menu(gads_service, client, accounts_info):
           "2. Budget Report - All Properties\n"
           "Or type 'exit' at any prompt to quit immediately.\n")
 
-@services.handle_exceptions
+#@services.handle_exceptions
 def main():
     parser = argparse.ArgumentParser(
         prog="GAR",
