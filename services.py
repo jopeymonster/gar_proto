@@ -1,3 +1,5 @@
+# error: lambda sorts need adjusting to new columns layout
+
 # -*- coding: utf-8 -*-
 import os
 import sys
@@ -165,7 +167,7 @@ def ad_level_report_single(gads_service, client, start_date, end_date, time_seg,
     channel_type_enum, ad_group_type_enum, ad_type_enum = get_enums(client)
     # time_seg transform
     time_seg_string = f'segments.{time_seg}'
-    # ad_group_ad scoped query for standard campaigns
+    # ad_group_ad scoped query, will not capture PMAX campaigns due to lack of ad or ad_group scope dimension in Pmax
     query_ad_group = f"""
         SELECT
             {time_seg_string},
@@ -236,7 +238,7 @@ def ad_level_report_single(gads_service, client, start_date, end_date, time_seg,
                 row.metrics.conversions_value,
             ])
     # campaign scoped query for pmax campaigns
-    query_campaign = f"""
+    pmax_campaign_query = f"""
         SELECT
             {time_seg_string},
             customer.id,
@@ -259,7 +261,7 @@ def ad_level_report_single(gads_service, client, start_date, end_date, time_seg,
         AND campaign.advertising_channel_type = 'PERFORMANCE_MAX'
         ORDER BY {time_seg_string} ASC, campaign.name ASC
     """
-    response_campaign = gads_service.search_stream(customer_id=customer_id, query=query_campaign)
+    response_campaign = gads_service.search_stream(customer_id=customer_id, query=pmax_campaign_query)
     for batch in response_campaign:
         for row in batch.results:
             # ENUM decoding with fallbacks
@@ -351,14 +353,14 @@ def ad_level_report_all(gads_service, client, start_date, end_date, time_seg, ac
     if not all_data:
         print("No data returned for any accounts.")
         return [], []
-    # sort by: Day (0), Account name (2), descending Cost (12)
+    # sort by: time index (0), account name (2), descending Cost (12)
     table_data = sorted(
         all_data,
         key=lambda r: (r[0], r[2], -float(r[12]))
     )
     return table_data, headers
 
-def arc_sales_report_single(gads_service, client, start_date, end_date, time_seg, customer_id):
+def spark_report_single(gads_service, client, start_date, end_date, time_seg, customer_id):
     """
     Replicates the Google Ads Report Studio by pulling ad performance data
     with ad group and ad types using ad_group_ad as the main resource,
@@ -369,143 +371,49 @@ def arc_sales_report_single(gads_service, client, start_date, end_date, time_seg
     # time_seg transform
     time_seg_string = f'segments.{time_seg}'
     # ad_group_ad scoped query for standard campaigns
-    query_ad_group = f"""
+    campaign_query = f"""
         SELECT
-            {time_seg_string},
-            customer.id,
             customer.descriptive_name,
-            campaign.id,
+            customer.id,
             campaign.name,
             campaign.advertising_channel_type,
-            ad_group.id,
-            ad_group.name,
-            ad_group.type,
-            ad_group_ad.ad.id,
-            ad_group_ad.ad.type,
-            metrics.cost_micros,
-            metrics.impressions,
-            metrics.clicks,
-            metrics.video_views,
-            metrics.conversions,
-            metrics.conversions_value
-        FROM ad_group_ad
-        WHERE segments.date BETWEEN '{start_date}' AND '{end_date}'
-        ORDER BY {time_seg_string} ASC, campaign.name ASC
-    """
-    response_ad_group = gads_service.search_stream(customer_id=customer_id, query=query_ad_group)
-    table_data = []
-    for batch in response_ad_group:
-        for row in batch.results:
-            arc = helpers.extract_arc(row.campaign.name)
-            channel_type = (
-                channel_type_enum.AdvertisingChannelType.Name(row.campaign.advertising_channel_type)
-                if hasattr(row.campaign, 'advertising_channel_type') else 'UNDEFINED'
-            )
-            ad_group_type = (
-                ad_group_type_enum.AdGroupType.Name(row.ad_group.type_)
-                if hasattr(row.ad_group, 'type_') else 'UNDEFINED'
-            )
-            ad_type = (
-                ad_type_enum.AdType.Name(row.ad_group_ad.ad.type_)
-                if hasattr(row.ad_group_ad.ad, 'type_') else 'UNDEFINED'
-            )
-            date_value = getattr(row.segments, time_seg)
-            table_data.append([
-                date_value,
-                row.customer.id,
-                row.customer.descriptive_name,
-                arc,
-                row.campaign.id,
-                row.campaign.name,
-                channel_type,
-                row.ad_group.id,
-                row.ad_group.name,
-                ad_group_type,
-                row.ad_group_ad.ad.id,
-                ad_type,
-                Decimal(row.metrics.cost_micros / 1e6).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
-                row.metrics.impressions,
-                row.metrics.clicks,
-                row.metrics.video_views,
-                row.metrics.conversions,
-                row.metrics.conversions_value,
-            ])
-    # campaign scoped query for pmax campaigns
-    query_campaign = f"""
-        SELECT
             {time_seg_string},
-            customer.id,
-            customer.descriptive_name,
-            campaign.id,
-            campaign.name,
-            campaign.advertising_channel_type,
-            metrics.cost_micros,
-            metrics.impressions,
-            metrics.clicks,
-            metrics.video_views,
-            metrics.conversions,
-            metrics.conversions_value
+            metrics.cost_micros
         FROM campaign
         WHERE segments.date BETWEEN '{start_date}' AND '{end_date}'
-        AND campaign.advertising_channel_type = 'PERFORMANCE_MAX'
         ORDER BY {time_seg_string} ASC, campaign.name ASC
     """
-    response_campaign = gads_service.search_stream(customer_id=customer_id, query=query_campaign)
-    for batch in response_campaign:
+    campaign_query_response = gads_service.search_stream(customer_id=customer_id, query=campaign_query)
+    table_data = []
+    for batch in campaign_query_response:
         for row in batch.results:
-            # ENUM decoding with fallbacks
             arc = helpers.extract_arc(row.campaign.name)
             channel_type = (
                 channel_type_enum.AdvertisingChannelType.Name(row.campaign.advertising_channel_type)
                 if hasattr(row.campaign, 'advertising_channel_type') else 'UNDEFINED'
             )
-            # insert values for pmax ad group & ad info
-            pmax_camp_id = row.campaign.id
-            pmax_camp_name = row.campaign.name
             date_value = getattr(row.segments, time_seg)
             table_data.append([
-                date_value,
-                row.customer.id,
                 row.customer.descriptive_name,
-                arc,
-                row.campaign.id,
+                row.customer.id,
                 row.campaign.name,
                 channel_type,
-                pmax_camp_id,       # pmax ad_group.id placeholder
-                pmax_camp_name,     # pmax ad_group.name placeholder
-                "PMAX", # pmax ad_group.type
-                pmax_camp_id,       # pmax ad id placeholder
-                "PMAX", # pmax ad type
+                date_value,
                 Decimal(row.metrics.cost_micros / 1e6).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
-                row.metrics.impressions,
-                row.metrics.clicks,
-                row.metrics.video_views,
-                row.metrics.conversions,
-                row.metrics.conversions_value,
+                arc,
             ])
     headers = [
-        "Date",
-        "Customer ID",
         "Account name",
-        "ARC",
-        "Campaign ID",
+        "Customer ID",
         "Campaign name",
         "Campaign type",
-        "Ad group ID",
-        "Ad group name",
-        "Ad group type",
-        "Ad ID",
-        "Ad type",
+        "Date",
         "Cost",
-        "Impr.",
-        "Clicks",
-        "Views",
-        "Conversions",
-        "Conv. value",
+        "ARC",
     ]
     return table_data, headers
 
-def arc_sales_report_all(gads_service, client, start_date, end_date, time_seg, accounts_info):
+def spark_report_all(gads_service, client, start_date, end_date, time_seg, accounts_info):
     """
     Generates ARC sales report for all accounts listed in account_info.
 
@@ -525,7 +433,7 @@ def arc_sales_report_all(gads_service, client, start_date, end_date, time_seg, a
     for customer_id, account_descriptive in accounts_info.items():
         print(f"Processing {account_descriptive}...")
         try:
-            table_data, headers = arc_sales_report_single(
+            table_data, headers = spark_report_single(
                 gads_service, client, start_date, end_date, time_seg, customer_id
             )
             all_data.extend(table_data)
@@ -534,10 +442,10 @@ def arc_sales_report_all(gads_service, client, start_date, end_date, time_seg, a
     if not all_data:
         print("No data returned for any accounts.")
         return [], []
-    # Sort by: Day (0), Account name (2), descending Cost (12)
+    # sort by: time index (4), account name (0), descending cost (5)
     table_data = sorted(
         all_data,
-        key=lambda r: (r[0], r[2], -float(r[12]))
+        key=lambda r: (r[4], r[0], -float(r[5]))
     )
     return table_data, headers
 

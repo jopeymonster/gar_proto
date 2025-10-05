@@ -44,8 +44,8 @@ def main_menu(gads_service, client, accounts_info):
 
 def report_menu(gads_service, client, accounts_info):
     print("Reporting Options:\n"
-        "1. ARC Report - Single Property\n"
-        "2. ARC Report - All Properties\n"
+        "1. SPARK Report - Single Property\n"
+        "2. SPARK Report - All Properties\n"
         "3. Account Report - Single Property\n"
         "4. Account Report - All Properties\n"
         "5. Ads Report - Single Property\n"
@@ -55,7 +55,7 @@ def report_menu(gads_service, client, accounts_info):
     service_opt = input("Choose 1, 2, 3, 4, etc ('exit' to exit): ").lower()
     # single property ARC report
     if service_opt == '1':
-        print("ARC Sales Report - Single Property selected...")
+        print("SPARK Report - Single Property selected...")
         account_info = helpers.get_account_properties(accounts_info) # parse single account info
         account_id, account_name = account_info # parse single accountID
         report_date_details = helpers.get_timerange()
@@ -79,7 +79,7 @@ def report_menu(gads_service, client, accounts_info):
 
         # start time
         start_time = time.time()
-        table_data, headers = services.arc_sales_report_single(
+        table_data, headers = services.spark_report_single(
             gads_service, client, start_date, end_date, time_seg, customer_id=account_id) # pass single accountID
         end_time = time.time()
         print(f"Report compiled!\n"
@@ -88,7 +88,7 @@ def report_menu(gads_service, client, accounts_info):
         helpers.data_handling_options(table_data, headers, auto_view=False)
     # all properties ARC report
     elif service_opt == '2':
-        print("ARC Sales Report - All Properties selected.")
+        print("SPARK Report - All Properties selected.")
         report_date_details = helpers.get_timerange()
         date_opt, start_date, end_date, time_seg = report_date_details
         """        
@@ -109,7 +109,7 @@ def report_menu(gads_service, client, accounts_info):
 
         # start time
         start_time = time.time()
-        all_account_data, headers = services.arc_sales_report_all(
+        all_account_data, headers = services.spark_report_all(
             gads_service, client, start_date, end_date, time_seg, accounts_info) # pass all accounts
         end_time = time.time()
         print(f"Report compiled!\n"
