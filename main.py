@@ -75,7 +75,7 @@ def report_menu(gads_service, client, accounts_info):
             f"start_date: {start_date}\n"
             f"end_date: {end_date}\n")
             # f"time_condition: {time_condition}")
-        input("\nPause for debug - press ENTER to continue or input 'exit' to exit")
+        input("\nPause for debug - press ENTER to continue or input 'exit' to exit: ")
 
         # start time
         start_time = time.time()
@@ -105,7 +105,7 @@ def report_menu(gads_service, client, accounts_info):
             f"start_date: {start_date}\n"
             f"end_date: {end_date}\n")
             # f"time_condition: {time_condition}")
-        input("\nPause for debug - press ENTER to continue or input 'exit' to exit")
+        input("\nPause for debug - press ENTER to continue or input 'exit' to exit: ")
 
         # start time
         start_time = time.time()
@@ -136,7 +136,7 @@ def report_menu(gads_service, client, accounts_info):
             f"start_date: {start_date}\n"
             f"end_date: {end_date}\n")
             # f"time_condition: {time_condition}")
-        input("\nPause for debug - press ENTER to continue or input 'exit' to exit")
+        input("\nPause for debug - press ENTER to continue or input 'exit' to exit: ")
 
         # start time
         start_time = time.time()
@@ -165,7 +165,7 @@ def report_menu(gads_service, client, accounts_info):
             f"start_date: {start_date}\n"
             f"end_date: {end_date}\n")
             # f"time_condition: {time_condition}")
-        input("\nPause for debug - press ENTER to continue or input 'exit' to exit")
+        input("\nPause for debug - press ENTER to continue or input 'exit' to exit: ")
 
         # start time
         start_time = time.time()
@@ -190,7 +190,7 @@ def report_menu(gads_service, client, accounts_info):
             f"start_date: {start_date}\n"
             f"end_date: {end_date}\n")
             # f"time_condition: {time_condition}")
-        input("\nPause for debug - press ENTER to continue or input 'exit' to exit")
+        input("\nPause for debug - press ENTER to continue or input 'exit' to exit: ")
         
         start_time = time.time()
         all_account_data, headers = services.ad_level_report_single(
@@ -212,7 +212,7 @@ def report_menu(gads_service, client, accounts_info):
             f"start_date: {start_date}\n"
             f"end_date: {end_date}\n")
             # f"time_condition: {time_condition}")
-        input("\nPause for debug - press ENTER to continue or input 'exit' to exit")
+        input("\nPause for debug - press ENTER to continue or input 'exit' to exit: ")
 
         start_time = time.time()
         all_account_data, headers = services.ad_level_report_all(
@@ -247,7 +247,7 @@ def audit_menu(gads_service, client, accounts_info):
 
         # debug
         print(f"Account ID: {account_id}\n")
-        input("\nPause for debug - press ENTER to continue or input 'exit' to exit")
+        input("\nPause for debug - press ENTER to continue or input 'exit' to exit: ")
 
         label_table, label_table_headers, label_dict = services.get_labels(gads_service, client, customer_id=account_id)
         # handle data
@@ -276,7 +276,7 @@ def budget_menu(gads_service, client, accounts_info):
           "2. Budget Report - All Properties\n"
           "Or type 'exit' at any prompt to quit immediately.\n")
 
-#@services.handle_exceptions
+@services.handle_exceptions
 def main():
     parser = argparse.ArgumentParser(
         prog="GAR",
