@@ -101,6 +101,10 @@ def get_accounts(gads_service, customer_service, client):
     protected_accounts_dict = {str(k): str(v) for k, v in accounts_dict.items()}
     return accounts_list, headers, protected_accounts_dict, len(protected_accounts_dict)
 
+"""
+DECODERS/GETTERS
+"""
+
 def get_enums(client):
     """
     Fetches the enums for AdvertisingChannelType and AdGroupType from the Google Ads API client.
@@ -116,59 +120,6 @@ def get_enums(client):
     ad_type_enum = client.enums.AdTypeEnum
     return channel_type_enum, ad_group_type_enum, ad_type_enum
 
-# exceptions wrapper
-def handle_exceptions(func):
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        # GAds specific errors
-        except Unauthenticated as e:
-            print("Unable to authenticate or invalid credentials.  Please check your YAML or SECRETS file.")
-            print_error(func.__name__, e)
-        except GoogleAdsException as ex:
-            print("Google Ads API error encountered: \n"
-                  f"Request with ID '{ex.request_id}' failed with status '{ex.error.code().name}' and includes the following errors:\n")
-            for error in ex.failure.errors:
-                print(f"\tError with message '{error.message}'.")
-                if error.location:
-                    for field_path_element in error.location.field_path_elements:
-                        print(f"\t\tOn field: {field_path_element.field_name}")
-        except TooManyRequests as e:
-            print("Too many requests. API quota may have been reached or accessed too quickly. Please try again later.")
-            print_error(func.__name__, e)
-        except ResourceExhausted as e:
-            print("Resource exhausted. API quota may have been reached or accessed too quickly. Please try again later.")
-            print_error(func.__name__, e)
-        # generic requests exceptions
-        except requests.exceptions.RequestException as e:
-            print_error(func.__name__, e)
-        # other exceptions
-        except KeyboardInterrupt:
-            print("\nExiting the program...")
-            sys.exit(0)
-        except EOFError as e:
-            print_error(func.__name__, e)
-        except OSError as e:
-            print_error(func.__name__, e)
-        except TypeError as e:
-            print_error(func.__name__, e)
-        except ValueError as e:
-            print_error(func.__name__, e)
-        except KeyboardInterrupt as e:
-            print_error(func.__name__, e)
-        except FileNotFoundError as e:
-            print_error(func.__name__, e)
-        except AttributeError as e:
-            print_error(func.__name__, )
-        except Exception as e:
-            print_error(func.__name__, e)
-    def print_error(func_name, error):
-        print(f"\nError in function '{func_name}': {repr(error)} - Exiting...\n")
-    return wrapper
-
-"""
-AUDITING REPORTS
-"""
 def get_labels(gads_service, client, customer_id):
     label_query = """
         SELECT 
@@ -223,6 +174,59 @@ def get_campaign_groups(gads_service, client, customer_id):
     ]
     return camp_group_table, camp_group_headers, camp_group_dict
 
+# exceptions wrapper
+def handle_exceptions(func):
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        # GAds specific errors
+        except Unauthenticated as e:
+            print("Unable to authenticate or invalid credentials.  Please check your YAML or SECRETS file.")
+            print_error(func.__name__, e)
+        except GoogleAdsException as ex:
+            print("Google Ads API error encountered: \n"
+                  f"Request with ID '{ex.request_id}' failed with status '{ex.error.code().name}' and includes the following errors:\n")
+            for error in ex.failure.errors:
+                print(f"\tError with message '{error.message}'.")
+                if error.location:
+                    for field_path_element in error.location.field_path_elements:
+                        print(f"\t\tOn field: {field_path_element.field_name}")
+        except TooManyRequests as e:
+            print("Too many requests. API quota may have been reached or accessed too quickly. Please try again later.")
+            print_error(func.__name__, e)
+        except ResourceExhausted as e:
+            print("Resource exhausted. API quota may have been reached or accessed too quickly. Please try again later.")
+            print_error(func.__name__, e)
+        # generic requests exceptions
+        except requests.exceptions.RequestException as e:
+            print_error(func.__name__, e)
+        # other exceptions
+        except KeyboardInterrupt:
+            print("\nExiting the program...")
+            sys.exit(0)
+        except EOFError as e:
+            print_error(func.__name__, e)
+        except OSError as e:
+            print_error(func.__name__, e)
+        except TypeError as e:
+            print_error(func.__name__, e)
+        except ValueError as e:
+            print_error(func.__name__, e)
+        except KeyboardInterrupt as e:
+            print_error(func.__name__, e)
+        except FileNotFoundError as e:
+            print_error(func.__name__, e)
+        except AttributeError as e:
+            print_error(func.__name__, )
+        except Exception as e:
+            print_error(func.__name__, e)
+    def print_error(func_name, error):
+        print(f"\nError in function '{func_name}': {repr(error)} - Exiting...\n")
+    return wrapper
+
+"""
+AUDITING REPORTS
+"""
 def complete_labels_audit(gads_service, client, customer_id):
     channel_type_enum, ad_group_type_enum, _ = get_enums(client)
     # get label and campaign group metadata
