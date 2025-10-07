@@ -61,8 +61,8 @@ def display_account_list(accounts_info):
     """
     account_table = []
     for i, (account_id, account_name) in enumerate(accounts_info.items(), start=1):
-        account_table.append([i, account_id, account_name])
-    account_headers = ["#", "Customer ID", "Account Name"]
+        account_table.append([i, account_name, account_id])
+    account_headers = ["#", "Account Name", "Customer ID"]
     data_handling_options(
         table_data=account_table,
         headers=account_headers,
@@ -83,7 +83,7 @@ def display_account_list(accounts_info):
             if 1 <= selection <= len(accounts_info):
                 account_id = list(accounts_info.keys())[selection - 1]
                 account_name = accounts_info[account_id]
-                print(f"\nSelected Account: {account_id} ({account_name})")
+                print(f"\nSelected Account: {account_name} / {account_id} ")
                 choice = custom_input("Is this correct? (Y/N): ").strip().lower()
                 if choice in ("y", "yes"):
                     return str(account_id), account_name

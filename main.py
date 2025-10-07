@@ -53,8 +53,8 @@ def report_menu(gads_service, client, full_accounts_info):
         num_accounts[3], int
     """
     print("Reporting Options:\n"
-        "1. SPARK Report - Single Property\n"
-        "2. SPARK Report - All Properties\n"
+        "1. ARC Report - Single Property\n"
+        "2. ARC Report - All Properties\n"
         "3. Account Report - Single Property\n"
         "4. Account Report - All Properties\n"
         "5. Ads Report - Single Property\n"
@@ -64,45 +64,26 @@ def report_menu(gads_service, client, full_accounts_info):
     service_opt = input("Choose 1, 2, 3, 4, etc ('exit' to exit): ").lower()
     # single property ARC report
     if service_opt == '1':
-        print("SPARK Report - Single Property selected...")
+        print("ARC Report - Single Property selected...")
         account_info = helpers.get_account_properties(customer_dict) # parse single account info
         account_id, account_name = account_info # parse single accountID
         report_date_details = helpers.get_timerange()
         date_opt, start_date, end_date, time_seg = report_date_details
         include_channel_types = helpers.include_channel_types()
-        """  old code refactored
-        while True:
-            print("Would you like a detailed report that includes channel types?")
-            include_channel_types_opt = input("(Y)es or (N)o? Please select Y or N: ").strip().lower()
-            if include_channel_types_opt in ('y', 'yes'):
-                include_channel_types = True
-                print("Channel types will be included in the report.")
-                break
-            elif include_channel_types_opt in ('n', 'no'):
-                include_channel_types = False
-                print("Channel types will NOT be included in the report.")
-                break
-            else:
-                print("Invalid input, please select one of the indicated options (Y/N).")      
-        date_vars = {}
-        start_string_value = "start"
-        end_string_value = "end"
-        date_vars[start_string_value] = f"'{start_date}'"
-        date_vars[end_string_value] = f"'{end_date}'"
-        """
 
         # debug
-        print("\nServices params passback after get_timerange:\n"
+        print("\nServices params passback after prompts:\n"
             f"date_opt: {date_opt}\n"
             f"time_seg: {time_seg}\n"
             f"start_date: {start_date}\n"
-            f"end_date: {end_date}\n")
+            f"end_date: {end_date}\n"
+            f"include_channel_types: {include_channel_types}")
             # f"time_condition: {time_condition}")
         input("\nPause for debug - press ENTER to continue or input 'exit' to exit: ")
 
         # start time
         start_time = time.time()
-        table_data, headers = services.spark_report_single(
+        table_data, headers = services.arc_report_single(
             gads_service, client, start_date, end_date, time_seg, include_channel_types, customer_id=account_id) # pass single accountID
         end_time = time.time()
         print(f"Report compiled!\n"
@@ -111,23 +92,24 @@ def report_menu(gads_service, client, full_accounts_info):
         helpers.data_handling_options(table_data, headers, auto_view=False)
     # all properties ARC report
     elif service_opt == '2':
-        print("SPARK Report - All Properties selected.")
+        print("ARC Report - All Properties selected.")
         report_date_details = helpers.get_timerange()
         date_opt, start_date, end_date, time_seg = report_date_details
         include_channel_types = helpers.include_channel_types()
 
-        # query testing
-        print("\nServices params passback after get_timerange:\n"
+        # debug
+        print("\nServices params passback after prompts:\n"
             f"date_opt: {date_opt}\n"
             f"time_seg: {time_seg}\n"
             f"start_date: {start_date}\n"
-            f"end_date: {end_date}\n")
+            f"end_date: {end_date}\n"
+            f"include_channel_types: {include_channel_types}")
             # f"time_condition: {time_condition}")
         input("\nPause for debug - press ENTER to continue or input 'exit' to exit: ")
 
         # start time
         start_time = time.time()
-        all_account_data, headers = services.spark_report_all(
+        all_account_data, headers = services.arc_report_all(
             gads_service, client, start_date, end_date, time_seg, include_channel_types, customer_dict) # pass all accounts
         end_time = time.time()
         print(f"Report compiled!\n"
@@ -140,15 +122,9 @@ def report_menu(gads_service, client, full_accounts_info):
         account_id, account_name = account_info
         report_date_details = helpers.get_timerange()
         date_opt, start_date, end_date, time_seg = report_date_details
-        """        
-        date_vars = {}
-        start_string_value = "start"
-        end_string_value = "end"
-        date_vars[start_string_value] = f"'{start_date}'"
-        date_vars[end_string_value] = f"'{end_date}'"
-        """
-        # query testing
-        print("\nServices params passback after get_timerange:\n"
+
+        # debug
+        print("\nServices params passback after prompts:\n"
             f"date_opt: {date_opt}\n"
             f"time_seg: {time_seg}\n"
             f"start_date: {start_date}\n"
@@ -169,15 +145,9 @@ def report_menu(gads_service, client, full_accounts_info):
         print("Accounts Report - All Properties selected.")
         report_date_details = helpers.get_timerange()
         date_opt, start_date, end_date, time_seg = report_date_details
-        """        
-        date_vars = {}
-        start_string_value = "start"
-        end_string_value = "end"
-        date_vars[start_string_value] = f"'{start_date}'"
-        date_vars[end_string_value] = f"'{end_date}'"
-        """
-        # query testing
-        print("\nServices params passback after get_timerange:\n"
+
+        # debug
+        print("\nServices params passback after prompts:\n"
             f"date_opt: {date_opt}\n"
             f"time_seg: {time_seg}\n"
             f"start_date: {start_date}\n"
@@ -201,8 +171,8 @@ def report_menu(gads_service, client, full_accounts_info):
         report_date_details = helpers.get_timerange()
         date_opt, start_date, end_date, time_seg = report_date_details
 
-        # query testing
-        print("\nServices params passback after get_timerange:\n"
+        # debug
+        print("\nServices params passback after prompts:\n"
             f"date_opt: {date_opt}\n"
             f"time_seg: {time_seg}\n"
             f"start_date: {start_date}\n"

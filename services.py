@@ -533,9 +533,9 @@ def ad_level_report_all(gads_service, client, start_date, end_date, time_seg, ac
     )
     return all_data_sorted, headers
 
-def spark_report_single(gads_service, client, start_date, end_date, time_seg, include_channel_types, customer_id):
+def arc_report_single(gads_service, client, start_date, end_date, time_seg, include_channel_types, customer_id):
     """
-    Replicates the SPARK report for the selected customerID/account,
+    Replicates the Ad Response Codes report for the selected customerID/account,
     aggregating spend by Date, Account, ARC, and Channel Type, and optionally
     summarizing all channel types into ARC-level totals.
 
@@ -556,7 +556,7 @@ def spark_report_single(gads_service, client, start_date, end_date, time_seg, in
     channel_type_enum, ad_group_type_enum, ad_type_enum = get_enums(client)
     time_seg_string = f"segments.{time_seg}"
     # --- GAQL query ---
-    spark_campaign_query = f"""
+    arc_campaign_query = f"""
         SELECT
             {time_seg_string},
             customer.descriptive_name,
@@ -569,9 +569,9 @@ def spark_report_single(gads_service, client, start_date, end_date, time_seg, in
         ORDER BY {time_seg_string} ASC
     """
     # --- execute query ---
-    spark_query_response = gads_service.search_stream(customer_id=customer_id, query=spark_campaign_query)
+    arc_query_response = gads_service.search_stream(customer_id=customer_id, query=arc_campaign_query)
     table_data = []
-    for batch in spark_query_response:
+    for batch in arc_query_response:
         for row in batch.results:
             arc = helpers.extract_arc(row.campaign.name)
             channel_type = (
@@ -615,9 +615,9 @@ def spark_report_single(gads_service, client, start_date, end_date, time_seg, in
     table_data_sorted = sorted(aggregated, key=lambda r: (r[0], -float(r[-1])))
     return table_data_sorted, headers
 
-def spark_report_all(gads_service, client, start_date, end_date, time_seg, include_channel_types, accounts_info):
+def arc_report_all(gads_service, client, start_date, end_date, time_seg, include_channel_types, accounts_info):
     """
-    Generates the SPARK report for all accounts listed in account_info.
+    Generates the Ad Response Codes report for all accounts listed in account_info.
 
     Args:
         gads_service: The Google Ads service client.
@@ -635,7 +635,7 @@ def spark_report_all(gads_service, client, start_date, end_date, time_seg, inclu
     for customer_id, account_descriptive in accounts_info.items():
         print(f"Processing {account_descriptive}...")
         try:
-            table_data, headers = spark_report_single(
+            table_data, headers = arc_report_single(
                 gads_service, client, start_date, end_date, time_seg, include_channel_types, customer_id
             )
             all_data.extend(table_data)
