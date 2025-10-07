@@ -611,7 +611,7 @@ def spark_report_single(gads_service, client, start_date, end_date, time_seg, in
             for (date, account, arc), cost in grouped_data.items()
         ]
         headers = ["Date", "Account name", "Customer ID", "ARC", "Cost"]
-    # --- Sort by date ascending, cost descending ---
+    # --- sort by date ascending, cost descending ---
     table_data_sorted = sorted(aggregated, key=lambda r: (r[0], -float(r[-1])))
     return table_data_sorted, headers
 

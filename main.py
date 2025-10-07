@@ -16,13 +16,14 @@ def init_menu(yaml_loc=None):
     print("Authorization complete!\n")
     print("Retrieving account information...")
     # get accounts
-    customer_list, account_headers, customer_dict, num_accounts = services.get_accounts(gads_service, customer_service, client)
+    full_accounts_info = services.get_accounts(gads_service, customer_service, client)
+    customer_list, account_headers, customer_dict, num_accounts = full_accounts_info
     print("\nAccount information retrieved successfully!\n"
             f"Number of accounts found: {num_accounts}\n")
     helpers.data_handling_options(table_data=customer_list, headers=account_headers, auto_view=True)
-    main_menu(gads_service, client, accounts_info=customer_dict)
+    main_menu(gads_service, client, full_accounts_info)
 
-def main_menu(gads_service, client, accounts_info):
+def main_menu(gads_service, client, full_accounts_info):
     print("Main Menu - Select from the options below:\n"
           "1. Performance Reporting\n"
           "2. Account Auditing\n"
@@ -30,19 +31,27 @@ def main_menu(gads_service, client, accounts_info):
     data_scope = input("Choose a numbered option (1, 2, etc or 'exit' to exit): ")
     if data_scope == '1':
         print("ARC Reporting selected.")
-        report_menu(gads_service, client, accounts_info)
+        report_menu(gads_service, client, full_accounts_info)
     elif data_scope == '2':
         print("Auditing selected.")
-        audit_menu(gads_service, client, accounts_info)
+        audit_menu(gads_service, client, full_accounts_info)
     elif data_scope == '3':
         print("Budget Reporting selected.")
-        budget_menu(gads_service, client, accounts_info)
+        budget_menu(gads_service, client, full_accounts_info)
     else:
         print("Invalid input, please select one of the indicated numbered options.")
         # exit
         sys.exit(1)
 
-def report_menu(gads_service, client, accounts_info):
+def report_menu(gads_service, client, full_accounts_info):
+    customer_list, account_headers, customer_dict, num_accounts = full_accounts_info
+    """
+    full_accounts_info tuple:
+        customer_list[0], list
+        account_headers[1], list
+        customer_dict[2], dict
+        num_accounts[3], int
+    """
     print("Reporting Options:\n"
         "1. SPARK Report - Single Property\n"
         "2. SPARK Report - All Properties\n"
@@ -56,7 +65,7 @@ def report_menu(gads_service, client, accounts_info):
     # single property ARC report
     if service_opt == '1':
         print("SPARK Report - Single Property selected...")
-        account_info = helpers.get_account_properties(accounts_info) # parse single account info
+        account_info = helpers.get_account_properties(customer_dict) # parse single account info
         account_id, account_name = account_info # parse single accountID
         report_date_details = helpers.get_timerange()
         date_opt, start_date, end_date, time_seg = report_date_details
@@ -119,7 +128,7 @@ def report_menu(gads_service, client, accounts_info):
         # start time
         start_time = time.time()
         all_account_data, headers = services.spark_report_all(
-            gads_service, client, start_date, end_date, time_seg, include_channel_types, accounts_info) # pass all accounts
+            gads_service, client, start_date, end_date, time_seg, include_channel_types, customer_dict) # pass all accounts
         end_time = time.time()
         print(f"Report compiled!\n"
               f"Execution time: {end_time - start_time:.2f} seconds\n")
@@ -127,7 +136,7 @@ def report_menu(gads_service, client, accounts_info):
         helpers.data_handling_options(all_account_data, headers, auto_view=False)
     elif service_opt == '3':
         print("Accounts Report - Single Property selected...")
-        account_info = helpers.get_account_properties(accounts_info)
+        account_info = helpers.get_account_properties(customer_dict)
         account_id, account_name = account_info
         report_date_details = helpers.get_timerange()
         date_opt, start_date, end_date, time_seg = report_date_details
@@ -150,7 +159,7 @@ def report_menu(gads_service, client, accounts_info):
         # start time
         start_time = time.time()
         all_account_data, headers = services.account_report_single(
-            gads_service, client, start_date, end_date, time_seg, accounts_info)
+            gads_service, client, start_date, end_date, time_seg, customer_dict)
         end_time = time.time()
         print(f"Report compiled!\n"
               f"Execution time: {end_time - start_time:.2f} seconds\n")
@@ -179,7 +188,7 @@ def report_menu(gads_service, client, accounts_info):
         # start time
         start_time = time.time()
         all_account_data, headers = services.account_report_all(
-            gads_service, client, start_date, end_date, time_seg, accounts_info)
+            gads_service, client, start_date, end_date, time_seg, customer_dict)
         end_time = time.time()
         print(f"Report compiled!\n"
               f"Execution time: {end_time - start_time:.2f} seconds\n")
@@ -187,7 +196,7 @@ def report_menu(gads_service, client, accounts_info):
         helpers.data_handling_options(all_account_data, headers, auto_view=False)
     elif service_opt =='5':
         print("Ads Report - Single Property selected.")
-        account_info = helpers.get_account_properties(accounts_info) # parse single account info
+        account_info = helpers.get_account_properties(customer_dict) # parse single account info
         account_id, account_name = account_info # parse accountID
         report_date_details = helpers.get_timerange()
         date_opt, start_date, end_date, time_seg = report_date_details
@@ -225,7 +234,7 @@ def report_menu(gads_service, client, accounts_info):
 
         start_time = time.time()
         all_account_data, headers = services.ad_level_report_all(
-            gads_service, client, start_date, end_date, time_seg, accounts_info) # pass all accounts
+            gads_service, client, start_date, end_date, time_seg, customer_dict) # pass all accounts
         end_time = time.time()
         print(f"Report compiled!\n"
               f"Execution time: {end_time - start_time:.2f} seconds\n")
@@ -242,7 +251,15 @@ def report_menu(gads_service, client, accounts_info):
         # exit
         sys.exit(1)
 
-def audit_menu(gads_service, client, accounts_info):
+def audit_menu(gads_service, client, full_accounts_info):
+    customer_list, account_headers, customer_dict, num_accounts = full_accounts_info
+    """
+    full_accounts_info tuple:
+        customer_list[0], list
+        account_headers[1], list
+        customer_dict[2], dict
+        num_accounts[3], int
+    """
     print("Auditing Options:\n"
         "1. Account Labels List\n"
         "2. Campaign Group List\n"
@@ -251,7 +268,7 @@ def audit_menu(gads_service, client, accounts_info):
     service_opt = input("Choose 1, 2, 3, 4, etc ('exit' to exit): ")
     if service_opt == '1':
         print("Account Labels Only Audit selected...")
-        account_info = helpers.get_account_properties(accounts_info)
+        account_info = helpers.get_account_properties(customer_dict)
         account_id, account_name = account_info
 
         # debug
@@ -263,14 +280,14 @@ def audit_menu(gads_service, client, accounts_info):
         helpers.data_handling_options(label_table, label_table_headers, auto_view=False)
     elif service_opt == '2':
         print("Campaign Group Only Audit selected...")
-        account_info = helpers.get_account_properties(accounts_info)
+        account_info = helpers.get_account_properties(customer_dict)
         account_id, account_name = account_info
         camp_group_table, camp_group_headers, camp_group_dict = services.get_campaign_groups(gads_service, client, customer_id=account_id)
         # handle data
         helpers.data_handling_options(camp_group_table, camp_group_headers, auto_view=False)
     elif service_opt == '3':
         print("Campaign and Ad Group Label Assignments Audit selected...")
-        account_info = helpers.get_account_properties(accounts_info)
+        account_info = helpers.get_account_properties(customer_dict)
         account_id, account_name = account_info
         # execute full report
         full_audit_table, full_audit_headers, full_audit_dict = services.complete_labels_audit(gads_service, client, customer_id=account_id)
@@ -279,11 +296,19 @@ def audit_menu(gads_service, client, accounts_info):
     else:
         print("Invalid input, please select one of the indicated options.")
 
-def budget_menu(gads_service, client, accounts_info):
+def budget_menu(gads_service, client, full_accounts_info):
     print("Budget Options:\n"
           "1. Budget Report - Single Property\n"
           "2. Budget Report - All Properties\n"
           "Or type 'exit' at any prompt to quit immediately.\n")
+    customer_list, account_headers, customer_dict, num_accounts = full_accounts_info
+    """
+    full_accounts_info tuple:
+        customer_list[0], list
+        account_headers[1], list
+        customer_dict[2], dict
+        num_accounts[3], int
+    """
 
 #@services.handle_exceptions
 def main():

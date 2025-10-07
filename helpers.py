@@ -49,23 +49,45 @@ def get_account_properties(accounts_info):
     return account_info
 
 def display_account_list(accounts_info):
-    print("\nAvailable Properties:")
-    for i, (values, account_name) in enumerate(accounts_info.items(), start=1):
-        account_id = values
-        print(f"{i}. cID: {account_id} / Name: {account_name}")
+    """
+    Displays available accounts in a clean tabular format and prompts
+    the user to select one by number.
+
+    Args:
+        accounts_info (dict): {account_id: account_name}
+
+    Returns:
+        tuple: (account_id, account_name)
+    """
+    account_table = []
+    for i, (account_id, account_name) in enumerate(accounts_info.items(), start=1):
+        account_table.append([i, account_id, account_name])
+    account_headers = ["#", "Customer ID", "Account Name"]
+    data_handling_options(
+        table_data=account_table,
+        headers=account_headers,
+        auto_view=True
+    )
+    if len(accounts_info) == 1:
+        account_id, account_name = next(iter(accounts_info.items()))
+        print(f"\nOnly one account found: {account_name} / {account_id}")
+        return str(account_id), account_name
     while True:
-        selection = custom_input("\nSelect a account by number (1, 2, 3, etc) or enter 'exit' to exit: ").strip()
+        selection = custom_input(
+            "\nSelect an account by number (1, 2, 3, etc.) or enter 'exit' to quit: "
+        ).strip()
+        if selection.lower() == "exit":
+            sys.exit("User exited the account selection.")
         if selection.isdigit():
             selection = int(selection)
             if 1 <= selection <= len(accounts_info):
                 account_id = list(accounts_info.keys())[selection - 1]
                 account_name = accounts_info[account_id]
-                print(f"\nProp Info: {account_id}, {account_name}")
+                print(f"\nSelected Account: {account_id} ({account_name})")
                 choice = custom_input("Is this correct? (Y/N): ").strip().lower()
-                if choice == "y":
-                    account_info = str(account_id), account_name
-                    return account_info
-                elif choice == "n":
+                if choice in ("y", "yes"):
+                    return str(account_id), account_name
+                elif choice in ("n", "no"):
                     continue
                 else:
                     print("Invalid input. Please enter 'Y' or 'N'.")
