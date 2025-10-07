@@ -4,6 +4,7 @@
 import os
 import sys
 import requests
+from collections import defaultdict
 from decimal import Decimal, ROUND_HALF_UP
 from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
@@ -532,26 +533,29 @@ def ad_level_report_all(gads_service, client, start_date, end_date, time_seg, ac
     )
     return all_data_sorted, headers
 
-def spark_report_single(gads_service, client, start_date, end_date, time_seg, customer_id):
+def spark_report_single(gads_service, client, start_date, end_date, time_seg, include_channel_types, customer_id):
     """
-    Replicates the SPARK report for the selected customerID/account.
+    Replicates the SPARK report for the selected customerID/account,
+    aggregating spend by Date, Account, ARC, and Channel Type, and optionally
+    summarizing all channel types into ARC-level totals.
 
     Args:
         gads_service: The Google Ads service client.
         client: The authenticated Google Ads client.
         start_date (str): Start date (YYYY-MM-DD).
         end_date (str): End date (YYYY-MM-DD).
-        time_seg (str): Time segment or label.
-        customer_id (str): The selected account customerID.
+        time_seg (str): Time segmentation (e.g., 'date', 'month').
+        include_channel_types (bool): Whether to include channel types in output.
+        customer_id (str): Google Ads account customer ID.
 
     Returns:
-        tuple: (table_data_sorted, headers) for display or export.
+        tuple:
+            (table_data, headers)
     """
-    # enum decoders
+    # --- enum decoders ---
     channel_type_enum, ad_group_type_enum, ad_type_enum = get_enums(client)
-    # time_seg transform
-    time_seg_string = f'segments.{time_seg}'
-    # ad_group_ad scoped query for standard campaigns
+    time_seg_string = f"segments.{time_seg}"
+    # --- GAQL query ---
     spark_campaign_query = f"""
         SELECT
             {time_seg_string},
@@ -564,6 +568,7 @@ def spark_report_single(gads_service, client, start_date, end_date, time_seg, cu
         WHERE segments.date BETWEEN '{start_date}' AND '{end_date}'
         ORDER BY {time_seg_string} ASC
     """
+    # --- execute query ---
     spark_query_response = gads_service.search_stream(customer_id=customer_id, query=spark_campaign_query)
     table_data = []
     for batch in spark_query_response:
@@ -571,33 +576,46 @@ def spark_report_single(gads_service, client, start_date, end_date, time_seg, cu
             arc = helpers.extract_arc(row.campaign.name)
             channel_type = (
                 channel_type_enum.AdvertisingChannelType.Name(row.campaign.advertising_channel_type)
-                if hasattr(row.campaign, 'advertising_channel_type') else 'UNDEFINED'
+                if hasattr(row.campaign, "advertising_channel_type") else "UNDEFINED"
             )
             date_value = getattr(row.segments, time_seg)
+            cost_value = Decimal(row.metrics.cost_micros / 1e6).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
             table_data.append([
-                date_value,
-                row.customer.descriptive_name,
-                row.customer.id,
-                channel_type,
-                arc,
-                Decimal(row.metrics.cost_micros / 1e6).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+                date_value,                    # 0 - Date
+                row.customer.descriptive_name, # 1 - Account name
+                row.customer.id,               # 2 - Customer ID
+                channel_type,                  # 3 - Campaign type
+                arc,                           # 4 - ARC
+                cost_value,                    # 5 - Cost
             ])
-    headers = [
-        "Date",
-        "Account name",
-        "Customer ID",
-        "Campaign type",
-        "ARC",
-        "Cost",
-    ]
-    # sort by: time index (0), descending cost (5)
-    table_data_sorted = sorted(
-        table_data,
-        key=lambda r: (r[0], -float(r[5]))
-    )
+    # --- aggregation ---
+    if include_channel_types:
+        # channel detailed (date, account, channel type, arc)
+        grouped_data = defaultdict(Decimal)
+        for row in table_data:
+            key = (row[0], row[1], row[3], row[4]) # (date, account, channel type, arc)
+            grouped_data[key] += row[5]
+        aggregated = [
+            [date, account, customer_id, channel, arc, cost]
+            for (date, account, channel, arc), cost in grouped_data.items()
+        ]
+        headers = ["Date", "Account name", "Customer ID", "Campaign type", "ARC", "Cost"]
+    else:
+        # arc aggregate (all channels combined)
+        grouped_data = defaultdict(Decimal)
+        for row in table_data:
+            key = (row[0], row[1], row[4])
+            grouped_data[key] += row[5]
+        aggregated = [
+            [date, account, customer_id, arc, cost]
+            for (date, account, arc), cost in grouped_data.items()
+        ]
+        headers = ["Date", "Account name", "Customer ID", "ARC", "Cost"]
+    # --- Sort by date ascending, cost descending ---
+    table_data_sorted = sorted(aggregated, key=lambda r: (r[0], -float(r[-1])))
     return table_data_sorted, headers
 
-def spark_report_all(gads_service, client, start_date, end_date, time_seg, accounts_info):
+def spark_report_all(gads_service, client, start_date, end_date, time_seg, include_channel_types, accounts_info):
     """
     Generates the SPARK report for all accounts listed in account_info.
 
@@ -618,7 +636,7 @@ def spark_report_all(gads_service, client, start_date, end_date, time_seg, accou
         print(f"Processing {account_descriptive}...")
         try:
             table_data, headers = spark_report_single(
-                gads_service, client, start_date, end_date, time_seg, customer_id
+                gads_service, client, start_date, end_date, time_seg, include_channel_types, customer_id
             )
             all_data.extend(table_data)
         except Exception as e:
@@ -626,10 +644,16 @@ def spark_report_all(gads_service, client, start_date, end_date, time_seg, accou
     if not all_data:
         print("No data returned for any accounts.")
         return [], []
-    # sort by: time index (0), account name (1), descending cost (5)
-    all_data_sorted = sorted(
+    # sort by: time index (0), account name (1), descending cost (5) if channels included
+    if include_channel_types:
+        all_data_sorted = sorted(
+            all_data,
+            key=lambda r: (r[0], r[1], -float(r[5]))
+        )
+    # sort by: time index (0), account name (1), descending cost (4) if channels excluded
+    else: all_data_sorted = sorted( 
         all_data,
-        key=lambda r: (r[0], r[1], -float(r[5]))
+        key=lambda r: (r[0], r[1], -float(r[4]))
     )
     return all_data_sorted, headers
 

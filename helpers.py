@@ -72,6 +72,22 @@ def display_account_list(accounts_info):
                     continue
         print("Invalid selection. Please try again.")
 
+def include_channel_types():
+    while True:
+        print("\nWould you like a detailed report that includes channel types? (Y)es or (N)o")
+        include_channel_types_opt = input("Please select Y or N: ").strip().lower()
+        if include_channel_types_opt in ('y', 'yes'):
+            include_channel_types = True
+            print("Channel types will be included in the report.")
+            break
+        elif include_channel_types_opt in ('n', 'no'):
+            include_channel_types = False
+            print("Channel types will NOT be included in the report.")
+            break
+        else:
+            print("Invalid input, please select one of the indicated options (Y/N).")
+    return include_channel_types
+
 # data handling
 def data_handling_options(table_data, headers, auto_view=False):
     if auto_view:

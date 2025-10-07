@@ -60,7 +60,21 @@ def report_menu(gads_service, client, accounts_info):
         account_id, account_name = account_info # parse single accountID
         report_date_details = helpers.get_timerange()
         date_opt, start_date, end_date, time_seg = report_date_details
-        """        
+        include_channel_types = helpers.include_channel_types()
+        """  old code refactored
+        while True:
+            print("Would you like a detailed report that includes channel types?")
+            include_channel_types_opt = input("(Y)es or (N)o? Please select Y or N: ").strip().lower()
+            if include_channel_types_opt in ('y', 'yes'):
+                include_channel_types = True
+                print("Channel types will be included in the report.")
+                break
+            elif include_channel_types_opt in ('n', 'no'):
+                include_channel_types = False
+                print("Channel types will NOT be included in the report.")
+                break
+            else:
+                print("Invalid input, please select one of the indicated options (Y/N).")      
         date_vars = {}
         start_string_value = "start"
         end_string_value = "end"
@@ -80,7 +94,7 @@ def report_menu(gads_service, client, accounts_info):
         # start time
         start_time = time.time()
         table_data, headers = services.spark_report_single(
-            gads_service, client, start_date, end_date, time_seg, customer_id=account_id) # pass single accountID
+            gads_service, client, start_date, end_date, time_seg, include_channel_types, customer_id=account_id) # pass single accountID
         end_time = time.time()
         print(f"Report compiled!\n"
               f"Execution time: {end_time - start_time:.2f} seconds\n")
@@ -91,13 +105,8 @@ def report_menu(gads_service, client, accounts_info):
         print("SPARK Report - All Properties selected.")
         report_date_details = helpers.get_timerange()
         date_opt, start_date, end_date, time_seg = report_date_details
-        """        
-        date_vars = {}
-        start_string_value = "start"
-        end_string_value = "end"
-        date_vars[start_string_value] = f"'{start_date}'"
-        date_vars[end_string_value] = f"'{end_date}'"
-        """
+        include_channel_types = helpers.include_channel_types()
+
         # query testing
         print("\nServices params passback after get_timerange:\n"
             f"date_opt: {date_opt}\n"
@@ -110,7 +119,7 @@ def report_menu(gads_service, client, accounts_info):
         # start time
         start_time = time.time()
         all_account_data, headers = services.spark_report_all(
-            gads_service, client, start_date, end_date, time_seg, accounts_info) # pass all accounts
+            gads_service, client, start_date, end_date, time_seg, include_channel_types, accounts_info) # pass all accounts
         end_time = time.time()
         print(f"Report compiled!\n"
               f"Execution time: {end_time - start_time:.2f} seconds\n")
@@ -276,7 +285,7 @@ def budget_menu(gads_service, client, accounts_info):
           "2. Budget Report - All Properties\n"
           "Or type 'exit' at any prompt to quit immediately.\n")
 
-@services.handle_exceptions
+#@services.handle_exceptions
 def main():
     parser = argparse.ArgumentParser(
         prog="GAR",
