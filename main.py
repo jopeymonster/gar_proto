@@ -134,13 +134,13 @@ def report_menu(gads_service, client, full_accounts_info):
 
         # start time
         start_time = time.time()
-        all_account_data, headers = services.account_report_single(
-            gads_service, client, start_date, end_date, time_seg, customer_dict)
+        table_data, headers = services.account_report_single(
+            gads_service, client, start_date, end_date, time_seg, customer_id=account_id)
         end_time = time.time()
         print(f"Report compiled!\n"
               f"Execution time: {end_time - start_time:.2f} seconds\n")
         # handle data
-        helpers.data_handling_options(all_account_data, headers, auto_view=False)
+        helpers.data_handling_options(table_data, headers, auto_view=False)
     elif service_opt == '4':
         print("Accounts Report - All Properties selected.")
         report_date_details = helpers.get_timerange()

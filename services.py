@@ -10,6 +10,7 @@ from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
 from google.api_core.exceptions import TooManyRequests, ResourceExhausted, Unauthenticated
 import helpers
+import queries
 
 def generate_services(yaml_loc=None):
     """
@@ -72,19 +73,7 @@ def get_accounts(gads_service, customer_service, client):
     Returns:
         tuple: (accounts_list, headers, accounts_dict, number_of_accounts)
     """
-    customer_client_query = """
-        SELECT
-            customer_client.client_customer,
-            customer_client.level,
-            customer_client.manager,
-            customer_client.descriptive_name,
-            customer_client.id
-        FROM customer_client
-        WHERE customer_client.level <= 10
-        AND customer_client.status = 'ENABLED'
-        AND customer_client.hidden = FALSE
-        ORDER BY customer_client.descriptive_name ASC
-    """
+    customer_client_query = queries.customer_client_query()
     mcc_id = str(client.login_customer_id)
     mcc_response = gads_service.search_stream(customer_id=mcc_id, query=customer_client_query)
     accounts_list = []
@@ -121,14 +110,7 @@ def get_enums(client):
     return channel_type_enum, ad_group_type_enum, ad_type_enum
 
 def get_labels(gads_service, client, customer_id):
-    label_query = """
-        SELECT 
-        label.name, 
-        label.id
-        FROM label
-        WHERE label.status = 'ENABLED'
-        ORDER BY label.name ASC
-    """
+    label_query = queries.label_query()
     label_response = gads_service.search_stream(customer_id=customer_id, query=label_query)
     label_dict = {}
     label_table = []
@@ -148,14 +130,7 @@ def get_labels(gads_service, client, customer_id):
     return label_table, label_table_headers, label_dict
 
 def get_campaign_groups(gads_service, client, customer_id):
-    camp_group_query = """
-        SELECT
-        campaign_group.name,
-        campaign_group.id
-        FROM campaign_group
-        WHERE campaign_group.status = 'ENABLED'
-        ORDER BY campaign_group.name ASC 
-    """
+    camp_group_query = queries.camp_group_query()
     camp_group_response = gads_service.search_stream(customer_id=customer_id, query=camp_group_query)
     camp_group_dict = {}
     camp_group_table = []
@@ -233,24 +208,8 @@ def complete_labels_audit(gads_service, client, customer_id):
     label_table, label_table_headers, label_dict = get_labels(gads_service, client, customer_id)
     camp_group_table, camp_group_headers, camp_group_dict = get_campaign_groups(gads_service, client, customer_id)
     # query campaigns + ad groups
-    audit_query = """
-        SELECT
-            customer.id,
-            customer.descriptive_name,
-            campaign.id,
-            campaign.name,
-            campaign.advertising_channel_type,
-            campaign.campaign_group,
-            campaign.labels,
-            ad_group.id,
-            ad_group.name,
-            ad_group.type,
-            ad_group.labels
-        FROM ad_group
-        WHERE ad_group.status != 'REMOVED'
-        ORDER BY customer.descriptive_name ASC, campaign.name ASC, ad_group.name ASC
-    """
-    response = gads_service.search_stream(customer_id=customer_id, query=audit_query)
+    label_audit_query = queries.label_audit_query()
+    response = gads_service.search_stream(customer_id=customer_id, query=label_audit_query)
     audit_table = []
     audit_dict = {}
     for batch in response:
@@ -318,225 +277,6 @@ def complete_labels_audit(gads_service, client, customer_id):
 """
 PERFORMANCE REPORTS
 """
-def ad_level_report_single(gads_service, client, start_date, end_date, time_seg, customer_id):
-    """
-    Replicates the Google Ads Report Studio by pulling ad performance data
-    with ad group and ad types using ad_group_ad as the main resource,
-    and campaign-level data for Performance Max.
-
-    Args:
-        gads_service: The Google Ads service client.
-        client: The authenticated Google Ads client.
-        start_date (str): Start date (YYYY-MM-DD).
-        end_date (str): End date (YYYY-MM-DD).
-        time_seg (str): Time segment or label.
-        customer_id (str): The selected account customerID.
-
-    Returns:
-        tuple: (table_data, headers) for display or export.
-    """
-    # enum decoders
-    channel_type_enum, ad_group_type_enum, ad_type_enum = get_enums(client)
-    # time_seg transform
-    time_seg_string = f'segments.{time_seg}'
-    # ad_group_ad scoped query, will not capture PMAX campaigns due to lack of ad or ad_group scope dimension in Pmax
-    ad_group_ad_query = f"""
-        SELECT
-            {time_seg_string},
-            customer.id,
-            customer.descriptive_name,
-            campaign.id,
-            campaign.name,
-            campaign.advertising_channel_type,
-            ad_group.id,
-            ad_group.name,
-            ad_group.type,
-            ad_group_ad.ad.id,
-            ad_group_ad.ad.type,
-            metrics.cost_micros,
-            metrics.impressions,
-            metrics.absolute_top_impression_percentage,
-            metrics.top_impression_percentage,
-            metrics.video_views,
-            metrics.average_cpm,
-            metrics.clicks,
-            metrics.average_cpc,
-            metrics.conversions,
-            metrics.conversions_value
-        FROM ad_group_ad
-        WHERE segments.date BETWEEN '{start_date}' AND '{end_date}'
-        ORDER BY {time_seg_string} ASC, campaign.name ASC
-    """
-    ad_group_ad_response = gads_service.search_stream(customer_id=customer_id, query=ad_group_ad_query)
-    table_data = []
-    for batch in ad_group_ad_response:
-        for row in batch.results:
-            arc = helpers.extract_arc(row.campaign.name)
-            channel_type = (
-                channel_type_enum.AdvertisingChannelType.Name(row.campaign.advertising_channel_type)
-                if hasattr(row.campaign, 'advertising_channel_type') else 'UNDEFINED'
-            )
-            ad_group_type = (
-                ad_group_type_enum.AdGroupType.Name(row.ad_group.type_)
-                if hasattr(row.ad_group, 'type_') else 'UNDEFINED'
-            )
-            ad_type = (
-                ad_type_enum.AdType.Name(row.ad_group_ad.ad.type_)
-                if hasattr(row.ad_group_ad.ad, 'type_') else 'UNDEFINED'
-            )
-            date_value = getattr(row.segments, time_seg)
-            table_data.append([
-                date_value,
-                row.customer.id,
-                row.customer.descriptive_name,
-                arc,
-                row.campaign.id,
-                row.campaign.name,
-                channel_type,
-                row.ad_group.id,
-                row.ad_group.name,
-                ad_group_type,
-                row.ad_group_ad.ad.id,
-                ad_type,
-                Decimal(row.metrics.cost_micros / 1e6).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
-                row.metrics.impressions,
-                row.metrics.absolute_top_impression_percentage,
-                row.metrics.top_impression_percentage,
-                row.metrics.video_views,
-                Decimal(row.metrics.average_cpm / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
-                row.metrics.clicks,
-                Decimal(row.metrics.average_cpc / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
-                row.metrics.conversions,
-                row.metrics.conversions_value,
-            ])
-    # campaign scoped query for pmax campaigns
-    pmax_campaign_query = f"""
-        SELECT
-            {time_seg_string},
-            customer.id,
-            customer.descriptive_name,
-            campaign.id,
-            campaign.name,
-            campaign.advertising_channel_type,
-            metrics.cost_micros,
-            metrics.impressions,
-            metrics.absolute_top_impression_percentage,
-            metrics.top_impression_percentage,
-            metrics.video_views,
-            metrics.average_cpm,
-            metrics.clicks,
-            metrics.average_cpc,
-            metrics.conversions,
-            metrics.conversions_value
-        FROM campaign
-        WHERE segments.date BETWEEN '{start_date}' AND '{end_date}'
-        AND campaign.advertising_channel_type = 'PERFORMANCE_MAX'
-        ORDER BY {time_seg_string} ASC, campaign.name ASC
-    """
-    pmax_campaign_response = gads_service.search_stream(customer_id=customer_id, query=pmax_campaign_query)
-    for batch in pmax_campaign_response:
-        for row in batch.results:
-            # ENUM decoding with fallbacks
-            arc = helpers.extract_arc(row.campaign.name)
-            channel_type = (
-                channel_type_enum.AdvertisingChannelType.Name(row.campaign.advertising_channel_type)
-                if hasattr(row.campaign, 'advertising_channel_type') else 'UNDEFINED'
-            )
-            # insert values for pmax ad group & ad info
-            pmax_camp_id = row.campaign.id
-            pmax_camp_name = row.campaign.name
-            date_value = getattr(row.segments, time_seg)
-            table_data.append([
-                date_value,
-                row.customer.id,
-                row.customer.descriptive_name,
-                arc,
-                row.campaign.id,
-                row.campaign.name,
-                channel_type,
-                pmax_camp_id, # pmax ad_group.id placeholder
-                pmax_camp_name, # pmax ad_group.name placeholder
-                "PERFORMANCE_MAX", # pmax ad_group.type
-                pmax_camp_id, # pmax ad id placeholder
-                "PERFORMANCE_MAX", # pmax ad type
-                Decimal(row.metrics.cost_micros / 1e6).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
-                row.metrics.impressions,
-                row.metrics.absolute_top_impression_percentage,
-                row.metrics.top_impression_percentage,
-                row.metrics.video_views,
-                Decimal(row.metrics.average_cpm / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
-                row.metrics.clicks,
-                Decimal(row.metrics.average_cpc / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
-                row.metrics.conversions,
-                row.metrics.conversions_value,
-            ])
-    headers = [
-        "Date",
-        "Customer ID",
-        "Account name",
-        "ARC",
-        "Campaign ID",
-        "Campaign name",
-        "Campaign type",
-        "Ad group ID",
-        "Ad group name",
-        "Ad group type",
-        "Ad ID",
-        "Ad type",
-        "Cost",
-        "Impr.",
-        "Abs Top Imp%",
-        "Top Imp%",
-        "Video Views",
-        "Avg CPM",
-        "Clicks",
-        "Avg CPC",
-        "Conversions",
-        "Conv. value",
-    ]
-    # sort by: time index (0), descending cost (12)
-    table_data_sorted = sorted(
-        table_data,
-        key=lambda r:(r[0], -float(r[12]))
-    )
-    return table_data_sorted, headers
-
-def ad_level_report_all(gads_service, client, start_date, end_date, time_seg, accounts_info):
-    """
-    Generates ad scoped report for all accounts listed in account_info.
-
-    Args:
-        gads_service: The Google Ads service client.
-        client: The authenticated Google Ads client.
-        start_date (str): Start date (YYYY-MM-DD).
-        end_date (str): End date (YYYY-MM-DD).
-        time_seg (str): Time segment or label.
-        accounts_info (dict): Dictionary mapping account codes to [customer_id, descriptive_name].
-
-    Returns:
-        tuple: (all_data_sorted, headers) for display or export.
-    """
-    all_data = []
-    headers = None
-    for customer_id, account_descriptive in accounts_info.items():
-        print(f"Processing {account_descriptive}...")
-        try:
-            table_data, headers = ad_level_report_single(
-                gads_service, client, start_date, end_date, time_seg, customer_id
-            )
-            all_data.extend(table_data)
-        except Exception as e:
-            print(f"Error processing {account_descriptive} ({customer_id}): {e}")
-    if not all_data:
-        print("No data returned for any accounts.")
-        return [], []
-    # sort by: time index (0), account name (2), descending cost (12)
-    all_data_sorted = sorted(
-        all_data,
-        key=lambda r: (r[0], r[2], -float(r[12]))
-    )
-    return all_data_sorted, headers
-
 def arc_report_single(gads_service, client, start_date, end_date, time_seg, include_channel_types, customer_id):
     """
     Replicates the Ad Response Codes report for the selected customerID/account,
@@ -560,18 +300,7 @@ def arc_report_single(gads_service, client, start_date, end_date, time_seg, incl
     channel_type_enum, ad_group_type_enum, ad_type_enum = get_enums(client)
     time_seg_string = f"segments.{time_seg}"
     # --- GAQL query ---
-    arc_campaign_query = f"""
-        SELECT
-            {time_seg_string},
-            customer.descriptive_name,
-            customer.id,
-            campaign.name,
-            campaign.advertising_channel_type,
-            metrics.cost_micros
-        FROM campaign
-        WHERE segments.date BETWEEN '{start_date}' AND '{end_date}'
-        ORDER BY {time_seg_string} ASC
-    """
+    arc_campaign_query = queries.arc_campaign_query(start_date, end_date, time_seg_string)
     # --- execute query ---
     arc_query_response = gads_service.search_stream(customer_id=customer_id, query=arc_campaign_query)
     table_data = []
@@ -679,29 +408,11 @@ def account_report_single(gads_service, client, start_date, end_date, time_seg, 
     """
     # time_seg transform
     time_seg_string = f'segments.{time_seg}'
-    query = f"""
-    SELECT
-        {time_seg_string},
-        customer.descriptive_name,
-        customer.id,
-        metrics.clicks,
-        metrics.impressions,
-        metrics.ctr,
-        metrics.average_cpc,
-        metrics.cost_micros,
-        metrics.absolute_top_impression_percentage,
-        metrics.top_impression_percentage,
-        metrics.average_cpm
-    FROM customer
-    WHERE customer.status = 'ENABLED'
-    AND segments.date BETWEEN '{start_date}' AND '{end_date}'
-    ORDER BY 
-        {time_seg_string} ASC, customer.descriptive_name DESC
-    """ 
+    account_report_query = queries.account_report_query(start_date, end_date, time_seg_string)
     # initialize an empty list to store the data
     table_data = []
     # fetch data and populate the table_data list
-    response = gads_service.search_stream(customer_id=customer_id, query=query)
+    response = gads_service.search_stream(customer_id=customer_id, query=account_report_query)
     for data in response:
         for row in data.results:
             date_value = getattr(row.segments, time_seg)
@@ -710,12 +421,12 @@ def account_report_single(gads_service, client, start_date, end_date, time_seg, 
                 date_value,
                 row.customer.descriptive_name,
                 row.customer.id,
-                row.metrics.cost_micros,
+                Decimal(row.metrics.cost_micros / 1e6).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
                 row.metrics.clicks,
                 row.metrics.impressions,
                 row.metrics.ctr,
-                row.metrics.average_cpc,
-                row.metrics.average_cpm,
+                Decimal(row.metrics.average_cpc / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
+                Decimal(row.metrics.average_cpm / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
                 row.metrics.absolute_top_impression_percentage,
                 row.metrics.top_impression_percentage,
             ])
@@ -774,6 +485,177 @@ def account_report_all(gads_service, client, start_date, end_date, time_seg, acc
     all_data_sorted = sorted(
         all_data,
         key=lambda r: (r[0], r[1], -float(r[3]))
+    )
+    return all_data_sorted, headers
+
+def ad_level_report_single(gads_service, client, start_date, end_date, time_seg, customer_id):
+    """
+    Replicates the Google Ads Report Studio by pulling ad performance data
+    with ad group and ad types using ad_group_ad as the main resource,
+    and campaign-level data for Performance Max.
+
+    Args:
+        gads_service: The Google Ads service client.
+        client: The authenticated Google Ads client.
+        start_date (str): Start date (YYYY-MM-DD).
+        end_date (str): End date (YYYY-MM-DD).
+        time_seg (str): Time segment or label.
+        customer_id (str): The selected account customerID.
+
+    Returns:
+        tuple: (table_data, headers) for display or export.
+    """
+    # enum decoders
+    channel_type_enum, ad_group_type_enum, ad_type_enum = get_enums(client)
+    # time_seg transform
+    time_seg_string = f'segments.{time_seg}'
+    # ad_group_ad scoped query, will not capture PMAX campaigns due to lack of ad or ad_group scope dimension in Pmax
+    ad_group_ad_query = queries.ad_group_ad_query(start_date, end_date, time_seg_string)
+    ad_group_ad_response = gads_service.search_stream(customer_id=customer_id, query=ad_group_ad_query)
+    table_data = []
+    for batch in ad_group_ad_response:
+        for row in batch.results:
+            arc = helpers.extract_arc(row.campaign.name)
+            channel_type = (
+                channel_type_enum.AdvertisingChannelType.Name(row.campaign.advertising_channel_type)
+                if hasattr(row.campaign, 'advertising_channel_type') else 'UNDEFINED'
+            )
+            ad_group_type = (
+                ad_group_type_enum.AdGroupType.Name(row.ad_group.type_)
+                if hasattr(row.ad_group, 'type_') else 'UNDEFINED'
+            )
+            ad_type = (
+                ad_type_enum.AdType.Name(row.ad_group_ad.ad.type_)
+                if hasattr(row.ad_group_ad.ad, 'type_') else 'UNDEFINED'
+            )
+            date_value = getattr(row.segments, time_seg)
+            table_data.append([
+                date_value,
+                row.customer.id,
+                row.customer.descriptive_name,
+                arc,
+                row.campaign.id,
+                row.campaign.name,
+                channel_type,
+                row.ad_group.id,
+                row.ad_group.name,
+                ad_group_type,
+                row.ad_group_ad.ad.id,
+                ad_type,
+                Decimal(row.metrics.cost_micros / 1e6).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+                row.metrics.impressions,
+                row.metrics.absolute_top_impression_percentage,
+                row.metrics.top_impression_percentage,
+                row.metrics.video_views,
+                Decimal(row.metrics.average_cpm / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
+                row.metrics.clicks,
+                Decimal(row.metrics.average_cpc / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
+                row.metrics.conversions,
+                row.metrics.conversions_value,
+            ])
+    # campaign scoped query for pmax campaigns
+    pmax_campaign_query = queries.pmax_campaign_query(start_date, end_date, time_seg_string)
+    pmax_campaign_response = gads_service.search_stream(customer_id=customer_id, query=pmax_campaign_query)
+    for batch in pmax_campaign_response:
+        for row in batch.results:
+            # ENUM decoding with fallbacks
+            arc = helpers.extract_arc(row.campaign.name)
+            channel_type = (
+                channel_type_enum.AdvertisingChannelType.Name(row.campaign.advertising_channel_type)
+                if hasattr(row.campaign, 'advertising_channel_type') else 'UNDEFINED'
+            )
+            # insert values for pmax ad group & ad info
+            pmax_camp_id = row.campaign.id
+            pmax_camp_name = row.campaign.name
+            date_value = getattr(row.segments, time_seg)
+            table_data.append([
+                date_value,
+                row.customer.id,
+                row.customer.descriptive_name,
+                arc,
+                row.campaign.id,
+                row.campaign.name,
+                channel_type,
+                pmax_camp_id, # pmax ad_group.id placeholder
+                pmax_camp_name, # pmax ad_group.name placeholder
+                "PERFORMANCE_MAX", # pmax ad_group.type
+                pmax_camp_id, # pmax ad id placeholder
+                "PERFORMANCE_MAX", # pmax ad type
+                Decimal(row.metrics.cost_micros / 1e6).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+                row.metrics.impressions,
+                row.metrics.absolute_top_impression_percentage,
+                row.metrics.top_impression_percentage,
+                row.metrics.video_views,
+                Decimal(row.metrics.average_cpm / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
+                row.metrics.clicks,
+                Decimal(row.metrics.average_cpc / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
+                row.metrics.conversions,
+                row.metrics.conversions_value,
+            ])
+    headers = [
+        "Date",
+        "Customer ID",
+        "Account name",
+        "ARC",
+        "Campaign ID",
+        "Campaign name",
+        "Campaign type",
+        "Ad group ID",
+        "Ad group name",
+        "Ad group type",
+        "Ad ID",
+        "Ad type",
+        "Cost",
+        "Impr.",
+        "Abs Top Imp%",
+        "Top Imp%",
+        "Video Views",
+        "Avg CPM",
+        "Clicks",
+        "Avg CPC",
+        "Conversions",
+        "Conv. value",
+    ]
+    # sort by: time index (0), descending cost (12)
+    table_data_sorted = sorted(
+        table_data,
+        key=lambda r:(r[0], -float(r[12]))
+    )
+    return table_data_sorted, headers
+
+def ad_level_report_all(gads_service, client, start_date, end_date, time_seg, accounts_info):
+    """
+    Generates ad scoped report for all accounts listed in account_info.
+
+    Args:
+        gads_service: The Google Ads service client.
+        client: The authenticated Google Ads client.
+        start_date (str): Start date (YYYY-MM-DD).
+        end_date (str): End date (YYYY-MM-DD).
+        time_seg (str): Time segment or label.
+        accounts_info (dict): Dictionary mapping account codes to [customer_id, descriptive_name].
+
+    Returns:
+        tuple: (all_data_sorted, headers) for display or export.
+    """
+    all_data = []
+    headers = None
+    for customer_id, account_descriptive in accounts_info.items():
+        print(f"Processing {account_descriptive}...")
+        try:
+            table_data, headers = ad_level_report_single(
+                gads_service, client, start_date, end_date, time_seg, customer_id
+            )
+            all_data.extend(table_data)
+        except Exception as e:
+            print(f"Error processing {account_descriptive} ({customer_id}): {e}")
+    if not all_data:
+        print("No data returned for any accounts.")
+        return [], []
+    # sort by: time index (0), account name (2), descending cost (12)
+    all_data_sorted = sorted(
+        all_data,
+        key=lambda r: (r[0], r[2], -float(r[12]))
     )
     return all_data_sorted, headers
 

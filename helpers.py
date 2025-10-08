@@ -195,40 +195,70 @@ def include_channel_types():
 
 # timedate handling
 def get_timerange():
+    """
+    Prompt the user to select either a single date or a date range,
+    with validation for correct format (YYYY-MM-DD) and logical order.
+    Defaults to today's date if user presses ENTER without input.
+    """
     while True:
         print("Reporting time range:\n"
               "1. Specific date\n"
               "2. Range of dates\n")
-        date_opt_input = input("Enter 1 or 2: ")
+        date_opt_input = input("Enter 1 or 2: ").strip()
+        # --- specific date ---
         if date_opt_input == '1':
             date_opt = 'Specific date'
-            spec_date = input("What day would you like to retrieve data for (YYYY-MM-DD): ")
-            start_date = spec_date
-            end_date = spec_date
-            time_seg = 'date'  # time_reg day options as below
-            print("Single date option selected, default time segmentation to 'date'.")
-            return date_opt, start_date, end_date, time_seg
+            while True:
+                spec_date_input = input("Enter the date (YYYY-MM-DD) or press ENTER for today: ").strip()
+                spec_date = validate_date_input(spec_date_input, default_today=True)
+                if spec_date:
+                    start_date = end_date = spec_date.strftime("%Y-%m-%d")
+                    time_seg = 'date'
+                    print("Single date option selected, defaulting time segmentation to 'date'.")
+                    return date_opt, start_date, end_date, time_seg
+        # --- date range ---
         elif date_opt_input == '2':
             date_opt = 'Date range'
-            start_date = input("Start Date (YYYY-MM-DD): ")
-            end_date = input("End Date (YYYY-MM-DD): ")
             while True:
-                print("Date range segmentation:\n"
-                    "1. Day\n"
-                    "2. Week\n"
-                    "3. Month\n"
-                    "4. Quarter\n"
-                    "5. Year\n")
-                time_seg_input = input("Select from one of the above numbered options (1, 2, 3, etc): ")
-                # transform time_seg
-                time_seg_options = {'1': 'date', '2': 'week', '3': 'month', '4': 'quarter', '5': 'year'}
-                time_seg = time_seg_options.get(time_seg_input)
-                if time_seg:
-                    return date_opt, start_date, end_date, time_seg
-                else:
-                    print("Invalid time segmentation option provided.")
+                start_input = input("Start Date (YYYY-MM-DD): ").strip()
+                end_input = input("End Date (YYYY-MM-DD): ").strip()
+                start_dt = validate_date_input(start_input, default_today=True)
+                end_dt = validate_date_input(end_input, default_today=True)
+                if not (start_dt and end_dt):
+                    continue  # invalid input, re-prompt
+                if start_dt > end_dt:
+                    print("Start date cannot be later than end date. Please re-enter.")
+                    continue
+                start_date = start_dt.strftime("%Y-%m-%d")
+                end_date = end_dt.strftime("%Y-%m-%d")
+                while True:
+                    print("\nDate range segmentation:\n"
+                          "1. Day\n"
+                          "2. Week\n"
+                          "3. Month\n"
+                          "4. Quarter\n"
+                          "5. Year\n")
+                    time_seg_input = input("Select from one of the above numbered options (1-5): ").strip()
+                    time_seg_options = {'1': 'date', '2': 'week', '3': 'month', '4': 'quarter', '5': 'year'}
+                    time_seg = time_seg_options.get(time_seg_input)
+                    if time_seg:
+                        return date_opt, start_date, end_date, time_seg
+                    else:
+                        print("Invalid segmentation option, please choose 1-5.")
         else:
             print("Invalid option, please enter 1 or 2.")
+
+def validate_date_input(date_str, default_today=False):
+    """Validate and return a date object from YYYY-MM-DD input."""
+    if not date_str and default_today:
+        today = date.today()
+        print(f"No date entered. Defaulting to today's date: {today.strftime('%Y-%m-%d')}")
+        return today
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d").date()
+    except ValueError:
+        print("Invalid date format. Please use YYYY-MM-DD (e.g., 2025-03-15).")
+        return None
 
 def get_last30days():
     today_actual = date.today()
