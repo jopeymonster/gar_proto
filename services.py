@@ -1,5 +1,3 @@
-# error: lambda sorts need adjusting to new columns layout
-
 # -*- coding: utf-8 -*-
 import os
 import sys
@@ -203,35 +201,36 @@ def handle_exceptions(func):
 AUDITING REPORTS
 """
 def complete_labels_audit(gads_service, client, customer_id):
+    # enum decoders
     channel_type_enum, ad_group_type_enum, _ = get_enums(client)
     # get label and campaign group metadata
     label_table, label_table_headers, label_dict = get_labels(gads_service, client, customer_id)
     camp_group_table, camp_group_headers, camp_group_dict = get_campaign_groups(gads_service, client, customer_id)
-    # query campaigns + ad groups
+    # GAQL query
     label_audit_query = queries.label_audit_query()
     response = gads_service.search_stream(customer_id=customer_id, query=label_audit_query)
     audit_table = []
     audit_dict = {}
     for batch in response:
         for row in batch.results:
-            # Decode enum fields
+            # decode enum fields
             channel_type = channel_type_enum.AdvertisingChannelType.Name(
                 row.campaign.advertising_channel_type
             ) if hasattr(row.campaign, 'advertising_channel_type') else 'UNDEFINED'
             ad_group_type = ad_group_type_enum.AdGroupType.Name(
                 row.ad_group.type_
             ) if hasattr(row.ad_group, 'type_') else 'UNDEFINED'
-            # Resolve labels
+            # resolve labels
             campaign_labels = [
                 label_dict.get(label.split('/')[-1], 'UNDEFINED') for label in row.campaign.labels
             ]
             ad_group_labels = [
                 label_dict.get(label.split('/')[-1], 'UNDEFINED') for label in row.ad_group.labels
             ]
-            # Campaign group name
+            # campaign group name
             campaign_group_id = row.campaign.campaign_group.split('/')[-1]
             campaign_group_name = camp_group_dict.get(campaign_group_id, 'UNDEFINED')
-            # Build flat row
+            # build flat row
             audit_table.append([
                 row.customer.id,
                 row.customer.descriptive_name,
@@ -245,7 +244,7 @@ def complete_labels_audit(gads_service, client, customer_id):
                 ad_group_type,
                 ', '.join(ad_group_labels)
             ])
-            # Build structured dict
+            # build structured dict
             audit_dict[(row.campaign.id, row.ad_group.id)] = {
                 "customer_id": row.customer.id,
                 "customer_name": row.customer.descriptive_name,
@@ -296,12 +295,11 @@ def arc_report_single(gads_service, client, start_date, end_date, time_seg, incl
         tuple:
             (table_data, headers)
     """
-    # --- enum decoders ---
+    # enum decoders
     channel_type_enum, ad_group_type_enum, ad_type_enum = get_enums(client)
     time_seg_string = f"segments.{time_seg}"
-    # --- GAQL query ---
+    # GAQL query
     arc_campaign_query = queries.arc_campaign_query(start_date, end_date, time_seg_string)
-    # --- execute query ---
     arc_query_response = gads_service.search_stream(customer_id=customer_id, query=arc_campaign_query)
     table_data = []
     for batch in arc_query_response:
@@ -321,7 +319,7 @@ def arc_report_single(gads_service, client, start_date, end_date, time_seg, incl
                 arc,                           # 4 - ARC
                 cost_value,                    # 5 - Cost
             ])
-    # --- aggregation ---
+    # aggregation
     if include_channel_types:
         # channel detailed (date, account, channel type, arc)
         grouped_data = defaultdict(Decimal)
@@ -344,7 +342,7 @@ def arc_report_single(gads_service, client, start_date, end_date, time_seg, incl
             for (date, account, arc), cost in grouped_data.items()
         ]
         headers = ["Date", "Account name", "Customer ID", "ARC", "Cost"]
-    # --- sort by date ascending, cost descending ---
+    # sort by date ascending, cost descending
     table_data_sorted = sorted(aggregated, key=lambda r: (r[0], -float(r[-1])))
     return table_data_sorted, headers
 
@@ -390,7 +388,6 @@ def arc_report_all(gads_service, client, start_date, end_date, time_seg, include
     )
     return all_data_sorted, headers
 
-# save as template for additional reports
 def account_report_single(gads_service, client, start_date, end_date, time_seg, customer_id):
     """
     Generates a top level performance report for the selected customerID/account.
@@ -406,8 +403,9 @@ def account_report_single(gads_service, client, start_date, end_date, time_seg, 
     Returns:
         tuple: (table_data_sorted, headers) for display or export.
     """
-    # time_seg transform
+    # enum decoders
     time_seg_string = f'segments.{time_seg}'
+    # GAQL query
     account_report_query = queries.account_report_query(start_date, end_date, time_seg_string)
     # initialize an empty list to store the data
     table_data = []
@@ -451,7 +449,6 @@ def account_report_single(gads_service, client, start_date, end_date, time_seg, 
         )
     return table_data_sorted, headers
 
-# save as template for additional reports
 def account_report_all(gads_service, client, start_date, end_date, time_seg, accounts_info):
     """
     Generates a top level performance report for all accounts listed in account_info.
@@ -659,6 +656,13 @@ def ad_level_report_all(gads_service, client, start_date, end_date, time_seg, ac
     )
     return all_data_sorted, headers
 
+def budget_report_single(gads_service, client, start_date, end_date, time_seg, customer_id):
+    print("Budget report - single", "test complete!")
+
+def budget_report_all(gads_service, client, start_date, end_date, time_seg, accounts_info):
+    print("Budget report - all, test complete!")
+
+# Prototyping/testing
 """
 def test_query(gads_service, client, customer_id):
     return
