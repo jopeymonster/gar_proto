@@ -104,72 +104,44 @@ customer.descriptive_name ASC,
 campaign.name ASC,
 ad_group.name ASC
 
--- click_view - TESTING
-SELECT 
-click_view.ad_group_ad, 
-click_view.gclid, 
-click_view.keyword, 
-click_view.keyword_info.match_type, 
-click_view.keyword_info.text, 
-click_view.page_number, 
-ad_group.campaign, 
-ad_group.id, 
-ad_group.labels, 
-ad_group.name, 
-ad_group.status, 
+-- click_view
+SELECT
+segments.date,
+customer.id,
+customer.descriptive_name,
+campaign.id,
+campaign.name,
 campaign.advertising_channel_type, 
-campaign.campaign_group, 
-campaign.id, 
-campaign.labels, 
-campaign.name, 
-segments.date, 
-segments.device, 
-segments.click_type, 
-customer.id, 
-customer.descriptive_name, 
-metrics.clicks 
-FROM click_view 
+ad_group.id,
+ad_group.name,
+click_view.ad_group_ad,
+click_view.gclid,
+click_view.keyword,
+click_view.keyword_info.match_type,
+click_view.keyword_info.text,
+click_view.page_number,
+click_view.location_of_presence.country,
+click_view.location_of_presence.region,
+click_view.location_of_presence.metro,
+click_view.location_of_presence.city,
+click_view.location_of_presence.most_specific,
+click_view.location_of_presence.country,
+click_view.location_of_presence.region,
+click_view.location_of_presence.metro,
+click_view.location_of_presence.city,
+click_view.location_of_presence.most_specific,
+segments.device,
+segments.click_type,
+metrics.clicks
+FROM click_view
 WHERE 
 metrics.clicks > 0 
-AND segments.date = '2024-05-01' 
+AND segments.date = {start_date}
 ORDER BY 
 segments.date ASC, 
-customer.descriptive_name ASC, 
-campaign.name ASC, 
-ad_group.name ASC
-
--- reporting breakdown
-SELECT 
-  segments.date, 
-  customer.id, 
-  customer.descriptive_name, 
-  campaign.id, 
-  campaign.name, 
-  campaign.advertising_channel_type, 
-  campaign.labels, 
-  ad_group.id, 
-  ad_group.name, 
-  ad_group.labels, 
-  ad_group.type, 
-  ad_group_ad.ad.id, 
-  ad_group_ad.ad.type, 
-  ad_group_ad.labels, 
-  metrics.cost_micros, 
-  metrics.impressions, 
-  metrics.clicks, 
-  metrics.video_views, 
-  metrics.conversions, 
-  metrics.conversions_value, 
-  campaign.campaign_group 
-FROM ad_group_ad 
-WHERE 
-  metrics.clicks > 0 
-  AND segments.date BETWEEN '2025-01-01' AND '2025-01-31' 
-ORDER BY 
-  segments.date ASC, 
-  customer.descriptive_name ASC, 
-  campaign.name ASC, 
-  ad_group.name ASC
+customer.descriptive_name DESC, 
+campaign.name DESC, 
+ad_group.name DESC
 
 -- reporting breakdown, w/campaign group
 SELECT 

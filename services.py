@@ -100,12 +100,15 @@ def get_enums(client):
         client (GoogleAdsClient): The Google Ads client object used for authentication and configuration.
 
     Returns:
-        tuple: (channel_type_enum, ad_group_type_enum, ad_type_enum)
+        tuple: (channel_type_enum, ad_group_type_enum, ad_type_enum, click_type_enum)
     """
     channel_type_enum = client.enums.AdvertisingChannelTypeEnum
     ad_group_type_enum = client.enums.AdGroupTypeEnum
     ad_type_enum = client.enums.AdTypeEnum
-    return channel_type_enum, ad_group_type_enum, ad_type_enum
+    click_type_enum = client.enums.ClickTypeEnum
+    keyword_match_type_enum = client.enums.KeywordMatchTypeEnum
+    device_type_enum = client.enums.DeviceEnum
+    return channel_type_enum, ad_group_type_enum, ad_type_enum, click_type_enum, keyword_match_type_enum, device_type_enum
 
 def get_labels(gads_service, client, customer_id):
     label_query = queries.label_query()
@@ -202,7 +205,8 @@ AUDITING REPORTS
 """
 def complete_labels_audit(gads_service, client, customer_id):
     # enum decoders
-    channel_type_enum, ad_group_type_enum, _ = get_enums(client)
+    undecoded_enums = get_enums(client)
+    channel_type_enum, ad_group_type_enum, *extra = undecoded_enums
     # get label and campaign group metadata
     label_table, label_table_headers, label_dict = get_labels(gads_service, client, customer_id)
     camp_group_table, camp_group_headers, camp_group_dict = get_campaign_groups(gads_service, client, customer_id)
@@ -296,7 +300,8 @@ def arc_report_single(gads_service, client, start_date, end_date, time_seg, incl
             (table_data, headers)
     """
     # enum decoders
-    channel_type_enum, ad_group_type_enum, ad_type_enum = get_enums(client)
+    undecoded_enums = get_enums(client)
+    channel_type_enum, *extra = undecoded_enums
     time_seg_string = f"segments.{time_seg}"
     # GAQL query
     arc_campaign_query = queries.arc_campaign_query(start_date, end_date, time_seg_string)
@@ -503,7 +508,8 @@ def ad_level_report_single(gads_service, client, start_date, end_date, time_seg,
         tuple: (table_data, headers) for display or export.
     """
     # enum decoders
-    channel_type_enum, ad_group_type_enum, ad_type_enum = get_enums(client)
+    undecoded_enums = get_enums(client)
+    channel_type_enum, ad_group_type_enum, ad_type_enum, *extra = undecoded_enums
     # time_seg transform
     time_seg_string = f'segments.{time_seg}'
     # ad_group_ad scoped query, will not capture PMAX campaigns due to lack of ad or ad_group scope dimension in Pmax
@@ -656,6 +662,150 @@ def ad_level_report_all(gads_service, client, start_date, end_date, time_seg, ac
     )
     return all_data_sorted, headers
 
+
+def click_view_report_single(gads_service, client, start_date, end_date, time_seg, customer_id):
+    """
+    Generates a click view performance report for the selected customerID/account.
+
+    Args:
+        gads_service: The Google Ads service client.
+        client: The authenticated Google Ads client.
+        start_date (str): Start date (YYYY-MM-DD).
+        end_date (str): End date (YYYY-MM-DD).
+        time_seg (str): Time segment or label.
+        customer_id (str): The selected account customerID.
+
+    Returns:
+        tuple: (table_data_sorted, headers) for display or export.
+    """
+    undecoded_enums = get_enums(client)
+    channel_type_enum, *extra, click_type_enum, keyword_match_type_enum, device_type_enum = undecoded_enums
+    # GAQL query
+    click_view_query = queries.click_view_query(start_date)
+    # initialize an empty list to store the data
+    table_data = []
+    # fetch data and populate the table_data list
+    response = gads_service.search_stream(customer_id=customer_id, query=click_view_query)
+    for data in response:
+        for row in data.results:
+            date_value = getattr(row.segments, time_seg)
+            channel_type = (
+                channel_type_enum.AdvertisingChannelType.Name(row.campaign.advertising_channel_type)
+                if hasattr(row.campaign, 'advertising_channel_type') else 'UNDEFINED'
+            )
+            click_type = (
+                click_type_enum.ClickType.Name(row.segments.click_type)
+                if hasattr(row.segments, 'click_type') else 'UNDEFINED'
+            )
+            keyword_match_type = (
+                keyword_match_type_enum.KeywordMatchType.Name(row.click_view.keyword_info.match_type)
+                if hasattr(row.click_view, 'keyword_info.match_type') else 'UNDEFINED'
+            )
+            keyword_match_type = (
+                keyword_match_type_enum.KeywordMatchType.Name(row.click_view.keyword_info.match_type)
+                if getattr(row.click_view, "keyword_info", None) and hasattr(row.click_view.keyword_info, "match_type")
+                else "UNDEFINED"
+            )
+            device_type = (
+                device_type_enum.Device.Name(row.segments.device)
+                if hasattr(row.segments, 'device') else 'UNDEFINED'
+            )
+            # append each row's data as a list or tuple to the table_data list
+            table_data.append([
+                date_value,
+                row.customer.descriptive_name,
+                row.customer.id,
+                row.campaign.name,
+                row.campaign.id,
+                channel_type, 
+                row.ad_group.name,
+                row.ad_group.id,
+                row.click_view.ad_group_ad,
+                row.click_view.gclid,
+                row.click_view.keyword,
+                keyword_match_type,
+                row.click_view.keyword_info.text,
+                row.click_view.page_number,
+                # row.click_view.location_of_presence.country,
+                # row.click_view.location_of_presence.region,
+                # row.click_view.location_of_presence.metro,
+                # row.click_view.location_of_presence.city,
+                # row.click_view.location_of_presence.most_specific,
+                device_type,
+                click_type,
+                row.metrics.clicks
+            ])
+    # define the headers for the table
+    headers = [
+        "Date",
+        "Account name",
+        "Customer ID",
+        "Campaign name",
+        "Campaign ID",
+        "Campaign type",
+        "Ad group name",
+        "Ad group ID",
+        "Ad",
+        "gclid",
+        "keyword",
+        "keyword_match_type",
+        "keyword_text",
+        "page_number",
+        # "location_of_presence_country",
+        # "location_of_presence_region",
+        # "location_of_presence_metro",
+        # "location_of_presence_city",
+        # "location_of_presence_most_specific",
+        "device",
+        "click_type",
+        "clicks",
+        ]
+    # sort by: time index (0), descending clicks (19)
+    table_data_sorted = sorted(
+        table_data,
+        key=lambda r: (r[0], -float(r[16]))
+        )
+    return table_data_sorted, headers
+
+def click_view_report_all(gads_service, client, start_date, end_date, time_seg, accounts_info):
+    """
+    Generates a click view performance report for all accounts listed in account_info.
+
+    Args:
+        gads_service: The Google Ads service client.
+        client: The authenticated Google Ads client.
+        start_date (str): Start date (YYYY-MM-DD).
+        end_date (str): End date (YYYY-MM-DD).
+        time_seg (str): Time segment or label.
+        accounts_info (dict): Dictionary mapping account codes to [customer_id, descriptive_name].
+
+    Returns:
+        tuple: (all_data_sorted, headers) for display or export.
+    """
+    all_data = []
+    headers = None
+    for customer_id, account_descriptive in accounts_info.items():
+        print(f"Processing {account_descriptive}...")
+        try:
+            table_data, headers = click_view_report_single(
+                gads_service, client, start_date, end_date, time_seg, customer_id
+            )
+            all_data.extend(table_data)
+        except Exception as e:
+            print(f"Error processing {account_descriptive} ({customer_id}): {e}")
+    if not all_data:
+        print("No data returned for any accounts.")
+        return [], []
+    # sort by: time index (0), account name (1), descending clicks (19)
+    all_data_sorted = sorted(
+        all_data,
+        key=lambda r: (r[0], r[1], -float(r[16]))
+    )
+    return all_data_sorted, headers
+
+"""
+BUDGET REPORTS
+"""
 def budget_report_single(gads_service, client, start_date, end_date, time_seg, customer_id):
     print("Budget report - single", "test complete!")
 

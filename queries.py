@@ -144,3 +144,45 @@ def pmax_campaign_query(start_date, end_date, time_seg_string):
         AND campaign.advertising_channel_type = 'PERFORMANCE_MAX'
         ORDER BY {time_seg_string} ASC, campaign.name ASC
     """
+
+# click_view
+def click_view_query(start_date):
+    return f"""
+        SELECT
+            segments.date,
+            customer.descriptive_name,
+            customer.id,
+            campaign.name,
+            campaign.id,
+            campaign.advertising_channel_type, 
+            ad_group.name,
+            ad_group.id,
+            click_view.ad_group_ad,
+            click_view.gclid,
+            click_view.keyword,
+            click_view.keyword_info.match_type,
+            click_view.keyword_info.text,
+            click_view.page_number,
+            click_view.location_of_presence.country,
+            click_view.location_of_presence.region,
+            click_view.location_of_presence.metro,
+            click_view.location_of_presence.city,
+            click_view.location_of_presence.most_specific,
+            click_view.location_of_presence.country,
+            click_view.location_of_presence.region,
+            click_view.location_of_presence.metro,
+            click_view.location_of_presence.city,
+            click_view.location_of_presence.most_specific,
+            segments.device,
+            segments.click_type,
+            metrics.clicks
+        FROM click_view
+        WHERE 
+            metrics.clicks > 0 
+            AND segments.date = '{start_date}'
+        ORDER BY 
+            segments.date ASC, 
+            customer.descriptive_name DESC, 
+            campaign.name DESC, 
+            ad_group.name DESC
+        """
