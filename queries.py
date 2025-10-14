@@ -77,7 +77,11 @@ def account_report_query(start_date, end_date, time_seg_string):
             customer.descriptive_name,
             customer.id,
             metrics.clicks,
+            metrics.invalid_clicks,
             metrics.impressions,
+            metrics.organic_clicks,
+            metrics.organic_impressions,
+            metrics.interactions,
             metrics.ctr,
             metrics.average_cpc,
             metrics.cost_micros,
@@ -90,7 +94,7 @@ def account_report_query(start_date, end_date, time_seg_string):
         ORDER BY {time_seg_string} ASC, customer.descriptive_name DESC
         """ 
 
-# ad_level
+# ad_level, does not include PMax (pmax technically doesn't have 'ad groups')
 def ad_group_ad_query(start_date, end_date, time_seg_string):
     return f"""
         SELECT
@@ -113,13 +117,14 @@ def ad_group_ad_query(start_date, end_date, time_seg_string):
             metrics.average_cpm,
             metrics.clicks,
             metrics.average_cpc,
+            metrics.interactions,
             metrics.conversions,
             metrics.conversions_value
         FROM ad_group_ad
         WHERE segments.date BETWEEN '{start_date}' AND '{end_date}'
         ORDER BY {time_seg_string} ASC, campaign.name ASC
     """
-
+# pmax query for ads_report
 def pmax_campaign_query(start_date, end_date, time_seg_string):
     return f"""
         SELECT
@@ -136,7 +141,9 @@ def pmax_campaign_query(start_date, end_date, time_seg_string):
             metrics.video_views,
             metrics.average_cpm,
             metrics.clicks,
+            metrics.invalid_clicks,
             metrics.average_cpc,
+            metrics.interactions,
             metrics.conversions,
             metrics.conversions_value
         FROM campaign
@@ -146,10 +153,10 @@ def pmax_campaign_query(start_date, end_date, time_seg_string):
     """
 
 # click_view
-def click_view_query(start_date):
+def click_view_query(start_date, end_date, time_seg_string):
     return f"""
         SELECT
-            segments.date,
+            {time_seg_string},
             customer.descriptive_name,
             customer.id,
             campaign.name,
@@ -163,11 +170,11 @@ def click_view_query(start_date):
             click_view.keyword_info.match_type,
             click_view.keyword_info.text,
             click_view.page_number,
-            click_view.location_of_presence.country,
-            click_view.location_of_presence.region,
-            click_view.location_of_presence.metro,
-            click_view.location_of_presence.city,
-            click_view.location_of_presence.most_specific,
+            click_view.area_of_interest.country,
+            click_view.area_of_interest.region,
+            click_view.area_of_interest.metro,
+            click_view.area_of_interest.city,
+            click_view.area_of_interest.most_specific,
             click_view.location_of_presence.country,
             click_view.location_of_presence.region,
             click_view.location_of_presence.metro,
@@ -179,10 +186,41 @@ def click_view_query(start_date):
         FROM click_view
         WHERE 
             metrics.clicks > 0 
-            AND segments.date = '{start_date}'
+            AND segments.date BETWEEN '{start_date}' AND '{end_date}'
         ORDER BY 
-            segments.date ASC, 
+            {time_seg_string} ASC, 
+            customer.descriptive_name DESC
+        """
+
+# paid_organic_search_term_view
+def paid_organic_search_term_view_query(start_date, end_date, time_seg_string):
+    return f"""
+        SELECT
+            {time_seg_string},
+            customer.id,
+            customer.descriptive_name,
+            campaign.id,
+            campaign.name,
+            campaign.advertising_channel_type,
+            ad_group.id,
+            ad_group_name,
+            metrics.organic_clicks,
+            metrics.organic_clicks_per_query,
+            metrics.organic_impressions,
+            metrics.organic_impressions_per_query,
+            metrics.organic_queries,
+            metrics.impressions,
+            metrics.combined_queries,
+            metrics.combined_clicks_per_query,
+            metrics.combined_clicks,
+            metrics.clicks,
+            metrics.average_cpc,
+            metrics.ctr,
+        FROM paid_organic_search_term_view
+        WHERE
+            AND segments.date BETWEEN '{start_date}' AND '{end_date}'
+        ORDER BY
+            {time_seg_string} ASC, 
             customer.descriptive_name DESC, 
-            campaign.name DESC, 
-            ad_group.name DESC
+            metrics.clicks DESC
         """

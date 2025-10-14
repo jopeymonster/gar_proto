@@ -190,12 +190,21 @@ def include_channel_types():
     return include_channel_types
 
 # timedate handling
-def get_timerange():
+def get_timerange(force_single=False):
     """
     Prompt the user to select either a single date or a date range,
     with validation for correct format (YYYY-MM-DD) and logical order.
     Defaults to today's date if user presses ENTER without input.
     """
+    if force_single:
+        date_opt = 'Specific date'
+        print("The report you selected only accepts a single date for reporting.")
+        spec_date_input = input("Enter the date (YYYY-MM-DD) or press ENTER for today: ").strip()
+        spec_date = validate_date_input(spec_date_input, default_today=True)
+        if spec_date:
+            start_date = end_date = spec_date.strftime("%Y-%m-%d")
+            time_seg = 'date'
+            return date_opt, start_date, end_date, time_seg
     while True:
         print("Reporting time range:\n"
               "1. Specific date\n"

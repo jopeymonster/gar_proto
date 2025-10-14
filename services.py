@@ -425,11 +425,14 @@ def account_report_single(gads_service, client, start_date, end_date, time_seg, 
                 row.customer.descriptive_name,
                 row.customer.id,
                 Decimal(row.metrics.cost_micros / 1e6).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
-                row.metrics.clicks,
+                (row.metrics.clicks-row.metrics.invalid_clicks),
+                row.metrics.interactions,
                 row.metrics.impressions,
                 row.metrics.ctr,
                 Decimal(row.metrics.average_cpc / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
                 Decimal(row.metrics.average_cpm / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
+                row.metrics.organic_impressions,
+                row.metrics.organic_clicks,
                 row.metrics.absolute_top_impression_percentage,
                 row.metrics.top_impression_percentage,
             ])
@@ -440,10 +443,13 @@ def account_report_single(gads_service, client, start_date, end_date, time_seg, 
         "customer id",
         "cost",
         "clicks",
+        "interactions",
         "impressions",
         "ctr",
         "avg cpc",
         "avg cpm",
+        "org impressions",
+        "org clicks",
         "abs top is",
         "top is %",
         ]
@@ -549,10 +555,11 @@ def ad_level_report_single(gads_service, client, start_date, end_date, time_seg,
                 row.metrics.impressions,
                 row.metrics.absolute_top_impression_percentage,
                 row.metrics.top_impression_percentage,
-                row.metrics.video_views,
                 Decimal(row.metrics.average_cpm / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
+                row.metrics.interactions,
                 row.metrics.clicks,
                 Decimal(row.metrics.average_cpc / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
+                row.metrics.video_views,
                 row.metrics.conversions,
                 row.metrics.conversions_value,
             ])
@@ -588,10 +595,11 @@ def ad_level_report_single(gads_service, client, start_date, end_date, time_seg,
                 row.metrics.impressions,
                 row.metrics.absolute_top_impression_percentage,
                 row.metrics.top_impression_percentage,
-                row.metrics.video_views,
                 Decimal(row.metrics.average_cpm / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
-                row.metrics.clicks,
+                row.metrics.interactions,
+                (row.metrics.clicks-row.metrics.invalid_clicks),
                 Decimal(row.metrics.average_cpc / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
+                row.metrics.video_views,
                 row.metrics.conversions,
                 row.metrics.conversions_value,
             ])
@@ -612,10 +620,11 @@ def ad_level_report_single(gads_service, client, start_date, end_date, time_seg,
         "Impr.",
         "Abs Top Imp%",
         "Top Imp%",
-        "Video Views",
         "Avg CPM",
+        "Interactions",
         "Clicks",
         "Avg CPC",
+        "Video Views",
         "Conversions",
         "Conv. value",
     ]
@@ -662,7 +671,6 @@ def ad_level_report_all(gads_service, client, start_date, end_date, time_seg, ac
     )
     return all_data_sorted, headers
 
-
 def click_view_report_single(gads_service, client, start_date, end_date, time_seg, customer_id):
     """
     Generates a click view performance report for the selected customerID/account.
@@ -678,10 +686,12 @@ def click_view_report_single(gads_service, client, start_date, end_date, time_se
     Returns:
         tuple: (table_data_sorted, headers) for display or export.
     """
+    # enum decoders
+    time_seg_string = f'segments.{time_seg}'
     undecoded_enums = get_enums(client)
     channel_type_enum, *extra, click_type_enum, keyword_match_type_enum, device_type_enum = undecoded_enums
     # GAQL query
-    click_view_query = queries.click_view_query(start_date)
+    click_view_query = queries.click_view_query(start_date, end_date, time_seg_string)
     # initialize an empty list to store the data
     table_data = []
     # fetch data and populate the table_data list
@@ -760,7 +770,7 @@ def click_view_report_single(gads_service, client, start_date, end_date, time_se
         "click_type",
         "clicks",
         ]
-    # sort by: time index (0), descending clicks (19)
+    # sort by: time index (0), descending clicks (16)
     table_data_sorted = sorted(
         table_data,
         key=lambda r: (r[0], -float(r[16]))
@@ -796,7 +806,7 @@ def click_view_report_all(gads_service, client, start_date, end_date, time_seg, 
     if not all_data:
         print("No data returned for any accounts.")
         return [], []
-    # sort by: time index (0), account name (1), descending clicks (19)
+    # sort by: time index (0), account name (1), descending clicks (16)
     all_data_sorted = sorted(
         all_data,
         key=lambda r: (r[0], r[1], -float(r[16]))
