@@ -59,9 +59,9 @@ def performance_menu(gads_service, client, full_accounts_info):
     # ARC report
     if report_opt == '1':
         print("ARC Report selected...")
-        account_scope = prompts.account_scope_prompt() # returns 'single' or 'all'
         report_date_details = helpers.get_timerange(force_single=False)
         date_opt, start_date, end_date, time_seg = report_date_details
+        account_scope = prompts.account_scope_prompt() # returns 'single' or 'all'
         include_channel_types = helpers.include_channel_types()
 
         # debug
@@ -102,9 +102,9 @@ def performance_menu(gads_service, client, full_accounts_info):
             helpers.data_handling_options(all_account_data, headers, auto_view=False)
     elif report_opt == '2':
         print("Accounts Report selected...")
-        account_scope = prompts.account_scope_prompt() # returns 'single' or 'all'
         report_date_details = helpers.get_timerange(force_single=False)
         date_opt, start_date, end_date, time_seg = report_date_details
+        account_scope = prompts.account_scope_prompt() # returns 'single' or 'all'
 
         # debug
         prompts.datetime_debug(account_scope, date_opt, start_date, end_date, time_seg)
@@ -142,9 +142,9 @@ def performance_menu(gads_service, client, full_accounts_info):
 
     elif report_opt == '3':
         print("Ads Report selected...")
-        account_scope = prompts.account_scope_prompt() # returns 'single' or 'all'
         report_date_details = helpers.get_timerange(force_single=False)
         date_opt, start_date, end_date, time_seg = report_date_details
+        account_scope = prompts.account_scope_prompt() # returns 'single' or 'all'
 
         # debug
         prompts.datetime_debug(account_scope, date_opt, start_date, end_date, time_seg)
@@ -181,9 +181,9 @@ def performance_menu(gads_service, client, full_accounts_info):
             helpers.data_handling_options(all_account_data, headers, auto_view=False)
     elif report_opt == '4':
         print("GCLID/ClickView Report selected...")
-        account_scope = prompts.account_scope_prompt() # returns 'single' or 'all'
-        report_date_details = helpers.get_timerange(force_single=True)
+        report_date_details = helpers.get_timerange(force_single=True) # click_view only supports single day reporting
         date_opt, start_date, end_date, time_seg = report_date_details
+        account_scope = prompts.account_scope_prompt() # returns 'single' or 'all'
 
         # debug
         prompts.datetime_debug(account_scope, date_opt, start_date, end_date, time_seg)
@@ -243,9 +243,9 @@ def budget_menu(gads_service, client, full_accounts_info):
     """
     # budget report
     if budget_opt == '1':
-        account_scope = prompts.account_scope_prompt() # returns 'single' or 'all'
         report_date_details = helpers.get_timerange(force_single=False)
         date_opt, start_date, end_date, time_seg = report_date_details
+        account_scope = prompts.account_scope_prompt() # returns 'single' or 'all'
 
         # debug
         prompts.datetime_debug(account_scope, date_opt, start_date, end_date, time_seg)
