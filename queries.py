@@ -77,6 +77,7 @@ def account_report_query(start_date, end_date, time_seg_string):
             customer.descriptive_name,
             customer.id,
             metrics.clicks,
+            metrics.invalid_clicks,
             metrics.impressions,
             metrics.interactions,
             metrics.ctr,
@@ -194,13 +195,17 @@ def paid_organic_search_term_view_query(start_date, end_date, time_seg_string):
     return f"""
         SELECT
             {time_seg_string},
+            segments.search_engine_results_page_type,
+            segments.keyword.info.match_type,
+            segments.keyword.info.text,
+            segments.device,
             customer.id,
             customer.descriptive_name,
             campaign.id,
             campaign.name,
             campaign.advertising_channel_type,
             ad_group.id,
-            ad_group_name,
+            ad_group.name,
             metrics.organic_clicks,
             metrics.organic_clicks_per_query,
             metrics.organic_impressions,
@@ -212,12 +217,13 @@ def paid_organic_search_term_view_query(start_date, end_date, time_seg_string):
             metrics.combined_clicks,
             metrics.clicks,
             metrics.average_cpc,
-            metrics.ctr,
+            metrics.ctr
         FROM paid_organic_search_term_view
         WHERE
-            AND segments.date BETWEEN '{start_date}' AND '{end_date}'
+            segments.date BETWEEN '{start_date}' AND '{end_date}'
         ORDER BY
             {time_seg_string} ASC, 
-            customer.descriptive_name DESC, 
+            customer.descriptive_name DESC,
+            campaign.name ASC,
             metrics.clicks DESC
         """

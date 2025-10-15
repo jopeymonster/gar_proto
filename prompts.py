@@ -15,6 +15,7 @@ def report_opt_prompt():
         "2. Account Report\n"
         "3. Ads Report\n"
         "4. GCLID/ClickView Report\n"
+        "5. Paid and Organic Search Terms Report\n"
         # "X. Test Query\n"
         "Or type 'exit' at any prompt to quit immediately.\n")
     report_opt = input("Choose a numbered option (1, 2, etc or 'exit' to exit): ")

@@ -55,6 +55,7 @@ def performance_menu(gads_service, client, full_accounts_info):
     2 = Account
     3 = Ads
     4 = GCLID/ClickView
+    5 = Paid and Organic Search Terms
     """
     # ARC report
     if report_opt == '1':
@@ -207,6 +208,45 @@ def performance_menu(gads_service, client, full_accounts_info):
         elif account_scope == 'all':
             start_time = time.time()
             all_account_data, headers = services.click_view_report_all(
+                gads_service,
+                client,
+                start_date,
+                end_date,
+                time_seg,
+                customer_dict # pass all accounts
+                )
+            end_time = time.time()
+            prompts.execution_time(start_time, end_time)
+            # handle data
+            helpers.data_handling_options(all_account_data, headers, auto_view=False)
+    elif report_opt == '5':
+        print("Paid and Organic Search Terms Report selected...")
+        report_date_details = helpers.get_timerange(force_single=False) # click_view only supports single day reporting
+        date_opt, start_date, end_date, time_seg = report_date_details
+        account_scope = prompts.account_scope_prompt() # returns 'single' or 'all'
+
+        # debug
+        prompts.datetime_debug(account_scope, date_opt, start_date, end_date, time_seg)
+
+        if account_scope == 'single':  
+            account_info = helpers.get_account_properties(customer_dict)
+            account_id, account_name = account_info
+            start_time = time.time()
+            table_data, headers = services.paid_org_search_term_report_single(
+                gads_service,
+                client,
+                start_date,
+                end_date,
+                time_seg,
+                customer_id=account_id # pass single accountID
+                )
+            end_time = time.time()
+            prompts.execution_time(start_time, end_time)
+            # handle data
+            helpers.data_handling_options(table_data, headers, auto_view=False)
+        elif account_scope == 'all':
+            start_time = time.time()
+            all_account_data, headers = services.paid_org_search_term_report_all(
                 gads_service,
                 client,
                 start_date,
