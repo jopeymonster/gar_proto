@@ -107,6 +107,7 @@ def performance_menu(gads_service, client, full_accounts_info):
             prompts.execution_time(start_time, end_time)
             # handle data
             helpers.data_handling_options(all_account_data, headers, auto_view=False)
+    # Account report
     elif report_opt == 'account':
         print("Accounts Report selected...")
         report_details = prompts.report_details_prompt(report_opt)
@@ -132,7 +133,8 @@ def performance_menu(gads_service, client, full_accounts_info):
                 start_date,
                 end_date,
                 time_seg,
-                customer_id=account_id # pass single accountID
+                customer_id=account_id, # pass single accountID
+                **kwargs
                 )
             end_time = time.time()
             prompts.execution_time(start_time, end_time)
@@ -146,7 +148,8 @@ def performance_menu(gads_service, client, full_accounts_info):
                 start_date,
                 end_date,
                 time_seg,
-                customer_dict # pass all accounts
+                customer_dict, # pass all accounts
+                **kwargs
                 )
             end_time = time.time()
             prompts.execution_time(start_time, end_time)

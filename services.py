@@ -317,7 +317,9 @@ def arc_report_single(gads_service, client, start_date, end_date, time_seg, cust
     # GAQL query
     arc_campaign_query = queries.arc_campaign_query(start_date, end_date, time_seg_string)
     arc_query_response = gads_service.search_stream(customer_id=customer_id, query=arc_campaign_query)
+    # initialize empty list
     table_data = []
+    # fetch data and populate list
     for batch in arc_query_response:
         for row in batch.results:
             arc = helpers.extract_arc(row.campaign.name)
@@ -327,39 +329,27 @@ def arc_report_single(gads_service, client, start_date, end_date, time_seg, cust
             )
             date_value = getattr(row.segments, time_seg)
             cost_value = Decimal(row.metrics.cost_micros / 1e6).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-            table_data.append([
-                date_value,                    # 0 - Date
-                row.customer.descriptive_name, # 1 - Account name
-                row.customer.id,               # 2 - Customer ID
-                channel_type,                  # 3 - Campaign type
-                arc,                           # 4 - ARC
-                cost_value,                    # 5 - Cost
-            ])
-    # aggregation
+            # build dict
+            arc_dict = {
+                "Date": date_value,
+                "Account name": row.customer.descriptive_name,
+                "Customer ID": row.customer.id,
+                "Campaign type": channel_type,
+                "ARC": arc,
+                "Cost": cost_value,
+            }
+            # append dict
+            table_data.append(arc_dict)
+    # define headers
+    headers = ["Date", "Account name", "Customer ID"] # primary dimensions
     if include_channel_types:
-        # channel detailed (date, account, channel type, arc)
-        grouped_data = defaultdict(Decimal)
-        for row in table_data:
-            key = (row[0], row[1], row[3], row[4]) # (date, account, channel type, arc)
-            grouped_data[key] += row[5]
-        aggregated = [
-            [date, account, customer_id, channel, arc, cost]
-            for (date, account, channel, arc), cost in grouped_data.items()
-        ]
-        headers = ["Date", "Account name", "Customer ID", "Campaign type", "ARC", "Cost"]
-    else:
-        # arc aggregate (all channels combined)
-        grouped_data = defaultdict(Decimal)
-        for row in table_data:
-            key = (row[0], row[1], row[4])
-            grouped_data[key] += row[5]
-        aggregated = [
-            [date, account, customer_id, arc, cost]
-            for (date, account, arc), cost in grouped_data.items()
-        ]
-        headers = ["Date", "Account name", "Customer ID", "ARC", "Cost"]
+        headers.append("Campaign type")
+    headers += ["ARC", "Cost"] # primary metrics
+    filtered_data = [[row.get(h) for h in headers] for row in table_data]
     # sort by date ascending, cost descending
-    table_data_sorted = sorted(aggregated, key=lambda r: (r[0], -float(r[-1])))
+    table_data_sorted = sorted(
+        filtered_data, 
+        key=lambda r: (r[0], -float(r[headers.index("Cost")])))
     return table_data_sorted, headers
 
 def arc_report_all(gads_service, client, start_date, end_date, time_seg, accounts_info, **kwargs):
@@ -380,7 +370,6 @@ def arc_report_all(gads_service, client, start_date, end_date, time_seg, account
     """
     all_data = []
     headers = None
-    include_channel_types = kwargs.get("include_channel_types", False)
     for customer_id, account_descriptive in accounts_info.items():
         print(f"Processing {account_descriptive}...")
         try:
@@ -393,20 +382,19 @@ def arc_report_all(gads_service, client, start_date, end_date, time_seg, account
     if not all_data:
         print("No data returned for any accounts.")
         return [], []
-    # sort by: time index (0), account name (1), descending cost (5) if channels included
-    if include_channel_types:
+    # sort by: time index (0), account name, descending cost
+    acct_idx = headers.index("Account name") if "Account name" in headers else 1
+    cost_idx = headers.index("Cost") if "Cost" in headers else -1
+    if cost_idx >= 0:
         all_data_sorted = sorted(
             all_data,
-            key=lambda r: (r[0], r[1], -float(r[5]))
+            key=lambda r: (r[0], r[acct_idx], -float(r[cost_idx]))
         )
-    # sort by: time index (0), account name (1), descending cost (4) if channels excluded
-    else: all_data_sorted = sorted( 
-        all_data,
-        key=lambda r: (r[0], r[1], -float(r[4]))
-    )
+    else:
+        all_data_sorted = sorted(all_data, key=lambda r: (r[0], r[acct_idx]))
     return all_data_sorted, headers
 
-def account_report_single(gads_service, client, start_date, end_date, time_seg, customer_id):
+def account_report_single(gads_service, client, start_date, end_date, time_seg, customer_id, **kwargs):
     """
     Generates a top level performance report for the selected customerID/account.
 
@@ -417,43 +405,45 @@ def account_report_single(gads_service, client, start_date, end_date, time_seg, 
         end_date (str): End date (YYYY-MM-DD).
         time_seg (str): Time segment or label.
         customer_id (str): The selected account customerID.
+        kwargs (dict): Contains report toggle options if available.
 
     Returns:
         tuple: (table_data_sorted, headers) for display or export.
     """
     # enum decoders
     time_seg_string = f'segments.{time_seg}'
-    # GAQL query
-    account_report_query = queries.account_report_query(start_date, end_date, time_seg_string)
     # initialize an empty list to store the data
     table_data = []
+    # GAQL query
+    account_report_query = queries.account_report_query(start_date, end_date, time_seg_string)
     # fetch data and populate the table_data list
-    response = gads_service.search_stream(customer_id=customer_id, query=account_report_query)
-    for data in response:
+    account_report_response = gads_service.search_stream(customer_id=customer_id, query=account_report_query)
+    for data in account_report_response:
         for row in data.results:
             date_value = getattr(row.segments, time_seg)
-            # append each row's data as a list or tuple to the table_data list
-            table_data.append([
-                date_value,
-                row.customer.descriptive_name,
-                row.customer.id,
-                Decimal(row.metrics.cost_micros / 1e6).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
-                row.metrics.clicks,
-                row.metrics.invalid_clicks,
-                (row.metrics.invalid_clicks / row.metrics.clicks), # invalid clicks %
-                row.metrics.interactions,
-                row.metrics.impressions,
-                row.metrics.ctr,
-                Decimal(row.metrics.average_cpc / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
-                Decimal(row.metrics.average_cpm / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
-                row.metrics.absolute_top_impression_percentage,
-                row.metrics.top_impression_percentage,
-            ])
+            # build dict struct
+            account_report_dict = {
+                "date": date_value,
+                "account": row.customer.descriptive_name,
+                "customer id": row.customer.id,
+                "cost": Decimal(row.metrics.cost_micros / 1e6).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+                "clicks": row.metrics.clicks,
+                "invalid clicks": row.metrics.invalid_clicks,
+                "invalid click %": (row.metrics.invalid_clicks / row.metrics.clicks), # invalid clicks %
+                "interactions": row.metrics.interactions,
+                "impressions": row.metrics.impressions,
+                "ctr": row.metrics.ctr,
+                "avg cpc": Decimal(row.metrics.average_cpc / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
+                "avg cpm": Decimal(row.metrics.average_cpm / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
+                "abs top is": row.metrics.absolute_top_impression_percentage,
+                "top is %": row.metrics.top_impression_percentage,
+                }
+            # append data
+            table_data.append(account_report_dict)
     # define the headers for the table
-    headers = [
-        "date",
-        "account",
-        "customer id",
+    headers = ["date","account","customer id"] # primary dimensions
+    # seperate metric headers, in case needing to expand later
+    headers += [
         "cost",
         "clicks",
         "invalid clicks",
@@ -466,14 +456,15 @@ def account_report_single(gads_service, client, start_date, end_date, time_seg, 
         "abs top is",
         "top is %",
         ]
-    # sort by: time index (0), descending cost (3)
+    filtered_data = [[row[h] for h in headers] for row in table_data]
+    # sort by: time index (0), descending cost
     table_data_sorted = sorted(
-        table_data,
-        key=lambda r: (r[0], -float(r[3]))
-        )
+        filtered_data,
+        key=lambda r:(r[0], -float(r[headers.index("cost")]))
+    )
     return table_data_sorted, headers
 
-def account_report_all(gads_service, client, start_date, end_date, time_seg, accounts_info):
+def account_report_all(gads_service, client, start_date, end_date, time_seg, accounts_info, **kwargs):
     """
     Generates a top level performance report for all accounts listed in account_info.
 
@@ -484,6 +475,7 @@ def account_report_all(gads_service, client, start_date, end_date, time_seg, acc
         end_date (str): End date (YYYY-MM-DD).
         time_seg (str): Time segment or label.
         accounts_info (dict): Dictionary mapping account codes to [customer_id, descriptive_name].
+        kwargs (dict): Contains report toggle options if applicable.
 
     Returns:
         tuple: (all_data_sorted, headers) for display or export.
@@ -502,11 +494,17 @@ def account_report_all(gads_service, client, start_date, end_date, time_seg, acc
     if not all_data:
         print("No data returned for any accounts.")
         return [], []
-    # sort by: time index (0), account name (1), descending cost (3)
-    all_data_sorted = sorted(
-        all_data,
-        key=lambda r: (r[0], r[1], -float(r[3]))
-    )
+    # sort by: time index (0), account name (1), descending cost
+    cost_idx = headers.index("cost") if "cost" in headers else None
+    acct_idx = headers.index("account") if "account" in headers else None
+    if cost_idx is not None and acct_idx is not None:
+        all_data_sorted = sorted(
+            all_data,
+            key=lambda r: (r[0], r[acct_idx], -float(r[cost_idx]))
+        )
+    else:
+        # fallback to date sort if error
+        all_data_sorted = sorted(all_data, key=lambda r: r[0])
     return all_data_sorted, headers
 
 def ad_level_report_single(gads_service, client, start_date, end_date, time_seg, customer_id, **kwargs):
@@ -559,6 +557,7 @@ def ad_level_report_single(gads_service, client, start_date, end_date, time_seg,
                 if hasattr(row.ad_group_ad.ad, 'type_') else 'UNDEFINED'
             )
             date_value = getattr(row.segments, time_seg)
+            # build dict struct
             ad_group_ad_dict = {
                 "Date": date_value,
                 "Customer ID": row.customer.id,
@@ -583,7 +582,7 @@ def ad_level_report_single(gads_service, client, start_date, end_date, time_seg,
                 "Video Views": row.metrics.video_views,
                 "Conversions": row.metrics.conversions,
                 "Conv. value": row.metrics.conversions_value,
-            }
+                }
             table_data.append(ad_group_ad_dict)
     # campaign scoped query for pmax campaigns
     pmax_campaign_query = queries.pmax_campaign_query(start_date, end_date, time_seg_string)
@@ -622,7 +621,6 @@ def ad_level_report_single(gads_service, client, start_date, end_date, time_seg,
                 "Conversions": row.metrics.conversions,
                 "Conv. value": row.metrics.conversions_value,
             }
-
             table_data.append(pmax_dict)
     headers = [ "Date", "Customer ID", "Account name", "ARC"] # primary dimensions
     if include_campaign_info:
