@@ -11,8 +11,8 @@ Requires a valid YAML configuration file for Google Ads API authentication.
 Information and setup guides can be found here: [Setup a Google API Console project](https://developers.google.com/google-ads/api/docs/get-started/oauth-cloud-project)
 
 The YAML file should contain the the developer token (required) and one of the following combinations of credentials:
-    - OAuth2 credentials: client ID, client secret, refresh token
-    - Service account credentials: service-account.json file obtain through Google Cloud Project
+- OAuth2 credentials: client ID, client secret, refresh token
+- Service account credentials: service-account.json file obtain through Google Cloud Project
 
 The file should be named 'google-ads.yaml' and located in the same directory as the 'main.py' file.
 The script will check if the YAML file exists and is valid before proceeding.
