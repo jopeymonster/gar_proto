@@ -189,6 +189,54 @@ def include_channel_types():
             print("Invalid input, please select one of the indicated options (Y/N).")
     return include_channel_types
 
+def include_campaign_info():
+    while True:
+        print("\nWould you like a detailed report that includes campaign names and IDs? (Y)es or (N)o")
+        include_campaign_info_opt = input("Please select Y or N: ").strip().lower()
+        if include_campaign_info_opt in ('y', 'yes'):
+            include_campaign_info = True
+            print("Campaign names and IDs will be included in the report.")
+            break
+        elif include_campaign_info_opt in ('n', 'no'):
+            include_campaign_info = False
+            print("Campaign names and IDs will NOT be included in the report.")
+            break
+        else:
+            print("Invalid input, please select one of the indicated options (Y/N).")
+    return include_campaign_info
+
+def include_adgroup_info():
+    while True:
+        print("\nWould you like a detailed report that includes ad group names and IDs? (Y)es or (N)o")
+        include_adgroup_info_opt = input("Please select Y or N: ").strip().lower()
+        if include_adgroup_info_opt in ('y', 'yes'):
+            include_adgroup_info = True
+            print("Ad group names and IDs will be included in the report.")
+            break
+        elif include_adgroup_info_opt in ('n', 'no'):
+            include_adgroup_info = False
+            print("Ad group names and IDs will NOT be included in the report.")
+            break
+        else:
+            print("Invalid input, please select one of the indicated options (Y/N).")
+    return include_adgroup_info
+
+def include_device_info():
+    while True:
+        print("\nWould you like a detailed report that includes device types? (Y)es or (N)o")
+        include_device_info_opt = input("Please select Y or N: ").strip().lower()
+        if include_device_info_opt in ('y', 'yes'):
+            include_device_info = True
+            print("Device types will be included in the report.")
+            break
+        elif include_device_info_opt in ('n', 'no'):
+            include_device_info = False
+            print("Device types will NOT be included in the report.")
+            break
+        else:
+            print("Invalid input, please select one of the indicated options (Y/N).")
+    return include_device_info
+
 # timedate handling
 def get_timerange(force_single=False):
     """

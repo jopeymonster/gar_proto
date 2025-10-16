@@ -49,29 +49,35 @@ def performance_menu(gads_service, client, full_accounts_info):
         customer_dict[2], dict
         num_accounts[3], int
     """
-    report_opt = prompts.report_opt_prompt() # returns stringified integer
-    """
-    1 = ARC
-    2 = Account
-    3 = Ads
-    4 = GCLID/ClickView
-    5 = Paid and Organic Search Terms
+    report_opt = prompts.report_opt_prompt()
+    """ 
+    Prompts list and returns below:
+        1 - 'arc'
+        2 - 'account'
+        3 - 'ads'
+        4 - 'clickview'
+        5 - 'paid_organic_terms'
     """
     # ARC report
-    if report_opt == '1':
+    if report_opt == 'arc':
         print("ARC Report selected...")
-        report_date_details = helpers.get_timerange(force_single=False)
-        date_opt, start_date, end_date, time_seg = report_date_details
-        account_scope = prompts.account_scope_prompt() # returns 'single' or 'all'
-        include_channel_types = helpers.include_channel_types()
+        report_details = prompts.report_details_prompt(report_opt)
+        date_opt, start_date, end_date, time_seg, account_scope = report_details
+        # reporting options kwargs
+        kwargs = {
+            "include_channel_types": helpers.include_channel_types(),
+            # "include_campaign_info": helpers.include_campaign_info(),
+            # "include_adgroup_info": helpers.include_adgroup_info(),
+            # "include_device_info": helpers.include_device_info()
+        }
 
         # debug
-        prompts.arc_debug(account_scope, date_opt, start_date, end_date, time_seg, include_channel_types)
-
+        prompts.data_review(report_details, **kwargs)
+        
         if account_scope == 'single':
             # parse single account info
             account_info = helpers.get_account_properties(customer_dict)
-            account_id, account_name = account_info
+            account_id, account_name = account_info # pass single accountID
             start_time = time.time()
             table_data, headers = services.arc_report_single(
                 gads_service,
@@ -79,8 +85,8 @@ def performance_menu(gads_service, client, full_accounts_info):
                 start_date,
                 end_date,
                 time_seg,
-                include_channel_types,
-                customer_id=account_id  # pass single accountID
+                customer_id=account_id,  # pass single accountID
+                **kwargs,
                 )
             end_time = time.time()
             prompts.execution_time(start_time, end_time)
@@ -94,22 +100,28 @@ def performance_menu(gads_service, client, full_accounts_info):
                 start_date,
                 end_date,
                 time_seg,
-                include_channel_types,
-                customer_dict # pass all accounts
+                customer_dict, # pass all accounts
+                **kwargs
                 ) 
             end_time = time.time()
             prompts.execution_time(start_time, end_time)
             # handle data
             helpers.data_handling_options(all_account_data, headers, auto_view=False)
-    elif report_opt == '2':
+    elif report_opt == 'account':
         print("Accounts Report selected...")
-        report_date_details = helpers.get_timerange(force_single=False)
-        date_opt, start_date, end_date, time_seg = report_date_details
-        account_scope = prompts.account_scope_prompt() # returns 'single' or 'all'
+        report_details = prompts.report_details_prompt(report_opt)
+        date_opt, start_date, end_date, time_seg, account_scope = report_details
+        # reporting options kwargs
+        kwargs = {
+            # "include_channel_types": helpers.include_channel_types(),
+            # "include_campaign_info": helpers.include_campaign_info(),
+            # "include_adgroup_info": helpers.include_adgroup_info(),
+            # "include_device_info": helpers.include_device_info()
+        }
 
         # debug
-        prompts.datetime_debug(account_scope, date_opt, start_date, end_date, time_seg)
-
+        prompts.data_review(report_details, **kwargs)
+        
         if account_scope == 'single':  
             account_info = helpers.get_account_properties(customer_dict)
             account_id, account_name = account_info
@@ -141,14 +153,20 @@ def performance_menu(gads_service, client, full_accounts_info):
             # handle data
             helpers.data_handling_options(all_account_data, headers, auto_view=False)
 
-    elif report_opt == '3':
+    elif report_opt == 'ads':
         print("Ads Report selected...")
-        report_date_details = helpers.get_timerange(force_single=False)
-        date_opt, start_date, end_date, time_seg = report_date_details
-        account_scope = prompts.account_scope_prompt() # returns 'single' or 'all'
+        report_details = prompts.report_details_prompt(report_opt)
+        date_opt, start_date, end_date, time_seg, account_scope = report_details
+        # reporting options kwargs
+        kwargs = {
+            "include_channel_types": helpers.include_channel_types(),
+            "include_campaign_info": helpers.include_campaign_info(),
+            "include_adgroup_info": helpers.include_adgroup_info(),
+            # "include_device_info": helpers.include_device_info()
+        }
 
         # debug
-        prompts.datetime_debug(account_scope, date_opt, start_date, end_date, time_seg)
+        prompts.data_review(report_details, **kwargs)
 
         if account_scope == 'single':  
             account_info = helpers.get_account_properties(customer_dict)
@@ -160,7 +178,8 @@ def performance_menu(gads_service, client, full_accounts_info):
                 start_date,
                 end_date,
                 time_seg,
-                customer_id=account_id # pass single accountID
+                customer_id=account_id, # pass single accountID
+                **kwargs
                 )
             end_time = time.time()
             prompts.execution_time(start_time, end_time)
@@ -174,20 +193,27 @@ def performance_menu(gads_service, client, full_accounts_info):
                 start_date,
                 end_date,
                 time_seg,
-                customer_dict # pass all accounts
+                customer_dict, # pass all accounts
+                **kwargs
                 )
             end_time = time.time()
             prompts.execution_time(start_time, end_time)
             # handle data
             helpers.data_handling_options(all_account_data, headers, auto_view=False)
-    elif report_opt == '4':
+    elif report_opt == 'clickview':
         print("GCLID/ClickView Report selected...")
-        report_date_details = helpers.get_timerange(force_single=True) # click_view only supports single day reporting
-        date_opt, start_date, end_date, time_seg = report_date_details
-        account_scope = prompts.account_scope_prompt() # returns 'single' or 'all'
+        report_details = prompts.report_details_prompt(report_opt)
+        date_opt, start_date, end_date, time_seg, account_scope = report_details
+        # reporting options kwargs
+        kwargs = {
+            "include_channel_types": helpers.include_channel_types(),
+            "include_campaign_info": helpers.include_campaign_info(),
+            "include_adgroup_info": helpers.include_adgroup_info(),
+            "include_device_info": helpers.include_device_info()
+        }
 
         # debug
-        prompts.datetime_debug(account_scope, date_opt, start_date, end_date, time_seg)
+        prompts.data_review(report_details, **kwargs)
 
         if account_scope == 'single':  
             account_info = helpers.get_account_properties(customer_dict)
@@ -199,7 +225,8 @@ def performance_menu(gads_service, client, full_accounts_info):
                 start_date,
                 end_date,
                 time_seg,
-                customer_id=account_id # pass single accountID
+                customer_id=account_id, # pass single accountID
+                **kwargs
                 )
             end_time = time.time()
             prompts.execution_time(start_time, end_time)
@@ -213,20 +240,27 @@ def performance_menu(gads_service, client, full_accounts_info):
                 start_date,
                 end_date,
                 time_seg,
-                customer_dict # pass all accounts
+                customer_dict, # pass all accounts
+                **kwargs
                 )
             end_time = time.time()
             prompts.execution_time(start_time, end_time)
             # handle data
             helpers.data_handling_options(all_account_data, headers, auto_view=False)
-    elif report_opt == '5':
+    elif report_opt == 'paid_organic_terms':
         print("Paid and Organic Search Terms Report selected...")
-        report_date_details = helpers.get_timerange(force_single=False) # click_view only supports single day reporting
-        date_opt, start_date, end_date, time_seg = report_date_details
-        account_scope = prompts.account_scope_prompt() # returns 'single' or 'all'
+        report_details = prompts.report_details_prompt(report_opt)
+        date_opt, start_date, end_date, time_seg, account_scope = report_details
+        # reporting options kwargs
+        kwargs = {
+            "include_channel_types": helpers.include_channel_types(),
+            "include_campaign_info": helpers.include_campaign_info(),
+            "include_adgroup_info": helpers.include_adgroup_info(),
+            "include_device_info": helpers.include_device_info()
+        }
 
         # debug
-        prompts.datetime_debug(account_scope, date_opt, start_date, end_date, time_seg)
+        prompts.data_review(report_details, **kwargs)
 
         if account_scope == 'single':  
             account_info = helpers.get_account_properties(customer_dict)
@@ -238,7 +272,8 @@ def performance_menu(gads_service, client, full_accounts_info):
                 start_date,
                 end_date,
                 time_seg,
-                customer_id=account_id # pass single accountID
+                customer_id=account_id, # pass single accountID
+                **kwargs
                 )
             end_time = time.time()
             prompts.execution_time(start_time, end_time)
@@ -252,7 +287,8 @@ def performance_menu(gads_service, client, full_accounts_info):
                 start_date,
                 end_date,
                 time_seg,
-                customer_dict # pass all accounts
+                customer_dict, # pass all accounts
+                **kwargs
                 )
             end_time = time.time()
             prompts.execution_time(start_time, end_time)
@@ -277,18 +313,24 @@ def budget_menu(gads_service, client, full_accounts_info):
         customer_dict[2], dict
         num_accounts[3], int
     """
-    budget_opt = prompts.budget_opt_prompt()
-    """
-    1 = budget report
+    report_opt = prompts.budget_opt_prompt()
+    """ 
+    Prompts list and returns below:
+        1 - 'budget'
     """
     # budget report
-    if budget_opt == '1':
-        report_date_details = helpers.get_timerange(force_single=False)
+    if report_opt == 'budget':
+        """
+        report_date_details = helpers.get_timerange(force_single=False) # click_view only supports single day reporting
         date_opt, start_date, end_date, time_seg = report_date_details
         account_scope = prompts.account_scope_prompt() # returns 'single' or 'all'
+        """
+        report_details = prompts.report_details_prompt(report_opt)
 
         # debug
-        prompts.datetime_debug(account_scope, date_opt, start_date, end_date, time_seg)
+        prompts.data_review(report_details)
+        
+        date_opt, start_date, end_date, time_seg, account_scope = report_details
 
         if account_scope == 'single':  
             account_info = helpers.get_account_properties(customer_dict)
