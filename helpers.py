@@ -173,6 +173,22 @@ def extract_arc(campaign_name):
     arc = campaign_name.rsplit(':', 1)[-1].strip()
     return arc if arc else 'UNDEFINED'
 
+def aggregate_channels():
+    while True:
+        print("\nWould you like a detailed report that includes aggregates channel types? (Y)es or (N)o")
+        aggregate_channels_opt = input("Please select Y or N: ").strip().lower()
+        if aggregate_channels_opt in ('y', 'yes'):
+            aggregate_channels = True
+            print("Channel types will be aggregated in the report.")
+            break
+        elif aggregate_channels_opt in ('n', 'no'):
+            aggregate_channels = False
+            print("Channel types will NOT be aggregated in the report.")
+            break
+        else:
+            print("Invalid input, please select one of the indicated options (Y/N).")
+    return aggregate_channels
+
 def include_channel_types():
     while True:
         print("\nWould you like a detailed report that includes channel types? (Y)es or (N)o")

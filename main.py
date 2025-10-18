@@ -66,7 +66,8 @@ def performance_menu(gads_service, client, full_accounts_info):
         # reporting options kwargs
         kwargs = {
             "include_channel_types": helpers.include_channel_types(),
-            # "include_campaign_info": helpers.include_campaign_info(),
+            # "aggregate_channels": helpers.aggregate_channels(),
+            "include_campaign_info": helpers.include_campaign_info(),
             # "include_adgroup_info": helpers.include_adgroup_info(),
             # "include_device_info": helpers.include_device_info()
         }

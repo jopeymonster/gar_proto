@@ -308,15 +308,20 @@ def arc_report_single(gads_service, client, start_date, end_date, time_seg, cust
         tuple:
             (table_data, headers)
     """
-    # toggles unpack
-    include_channel_types = kwargs.get("include_channel_types", False)
     # enum decoders
     undecoded_enums = get_enums(client)
     channel_type_enum, *extra = undecoded_enums
     time_seg_string = f"segments.{time_seg}"
+    include_channel_types = kwargs.get("include_channel_types", False)
+    include_campaign_info = kwargs.get("include_campaign_info", False)
     # GAQL query
-    arc_campaign_query = queries.arc_campaign_query(start_date, end_date, time_seg_string)
-    arc_query_response = gads_service.search_stream(customer_id=customer_id, query=arc_campaign_query)
+    arc_report_query = queries.arc_report_query(start_date, end_date, time_seg_string, **kwargs)
+
+    # debug query builder
+    print(arc_report_query)
+    input("\nPause for debug - press ENTER to continue or input 'exit' to exit: ")
+
+    arc_query_response = gads_service.search_stream(customer_id=customer_id, query=arc_report_query)
     # initialize empty list
     table_data = []
     # fetch data and populate list
@@ -329,28 +334,53 @@ def arc_report_single(gads_service, client, start_date, end_date, time_seg, cust
             )
             date_value = getattr(row.segments, time_seg)
             cost_value = Decimal(row.metrics.cost_micros / 1e6).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-            # build dict
+            # build dict, primary dims/metrics first
             arc_dict = {
                 "Date": date_value,
                 "Account name": row.customer.descriptive_name,
                 "Customer ID": row.customer.id,
-                "Campaign type": channel_type,
                 "ARC": arc,
                 "Cost": cost_value,
             }
+            # append campaign info if selected
+            if include_campaign_info:
+                arc_dict["Campaign"] = row.campaign.name
+            # append channel types if selected
+            if include_channel_types:
+                arc_dict["Campaign type"] = channel_type
+    
             # append dict
             table_data.append(arc_dict)
     # define headers
     headers = ["Date", "Account name", "Customer ID"] # primary dimensions
+    if include_campaign_info:
+        headers.append("Campaign")
     if include_channel_types:
         headers.append("Campaign type")
     headers += ["ARC", "Cost"] # primary metrics
-    filtered_data = [[row.get(h) for h in headers] for row in table_data]
+    # aggregate if campaign info is not included
+    if not include_campaign_info:
+        # determine grouping keys
+        if include_channel_types:
+            group_keys = ["Date", "Account name", "Customer ID", "Campaign type", "ARC"]
+        else:
+            group_keys = ["Date", "Account name", "Customer ID", "ARC"]
+    # Aggregate by key
+    aggregated = defaultdict(lambda: Decimal("0.00"))
+    for row in table_data:
+        key = tuple(row[k] for k in group_keys)
+        aggregated[key] += row["Cost"]
+    # convert aggregated dict into row of dicts
+    table_data = [
+        dict(zip(group_keys, key), Cost=value) for key, value in aggregated.items()
+    ]
+    headers = group_keys + ["Cost"]
     # sort by date ascending, cost descending
     table_data_sorted = sorted(
-        filtered_data, 
-        key=lambda r: (r[0], -float(r[headers.index("Cost")])))
-    return table_data_sorted, headers
+        table_data, 
+        key=lambda r: (r["Date"], -float(r["Cost"])))
+    filtered_data = [[row.get(h) for h in headers] for row in table_data_sorted]
+    return filtered_data, headers
 
 def arc_report_all(gads_service, client, start_date, end_date, time_seg, accounts_info, **kwargs):
     """

@@ -1,3 +1,33 @@
+# -*- coding: utf-8 -*-
+
+# query builder
+def build_query(
+    resource: str,
+    select_fields: list[str],
+    start_date: str,
+    end_date: str,
+    where_clauses: list[str] | None = None,
+    order_by: list[str] | None = None,
+) -> str:
+    """
+    GAQL query builder — segment-driven (no GROUP BY).
+    
+    In GAQL, aggregation is determined by which attributes and segments
+    are present in SELECT.
+    """
+    # SELECT
+    query = "SELECT\n    " + ",\n    ".join(select_fields)
+    query += f"\nFROM {resource}\n"
+    # WHERE
+    where_parts = [f"segments.date BETWEEN '{start_date}' AND '{end_date}'"]
+    if where_clauses:
+        where_parts.extend(where_clauses)
+    query += "WHERE " + " AND ".join(where_parts) + "\n"
+    # ORDER BY
+    if order_by:
+        query += "ORDER BY " + ", ".join(order_by) + "\n"
+    return query.strip()
+
 # customer/account info
 def customer_client_query(): 
     return """
@@ -55,19 +85,25 @@ def label_audit_query():
     """
 
 # arc
-def arc_campaign_query(start_date, end_date, time_seg_string):
-    return f"""
-        SELECT
-            {time_seg_string},
-            customer.descriptive_name,
-            customer.id,
-            campaign.name,
-            campaign.advertising_channel_type,
-            metrics.cost_micros
-        FROM campaign
-        WHERE segments.date BETWEEN '{start_date}' AND '{end_date}'
-        ORDER BY {time_seg_string} ASC
-    """
+def arc_report_query(start_date, end_date, time_seg_string, **kwargs):
+    # select
+    select_fields = [
+        time_seg_string,
+        "customer.descriptive_name",
+        "customer.id",
+        "campaign.name",
+        "campaign.advertising_channel_type",
+        "metrics.cost_micros"
+    ]
+    where_clauses = []
+    return build_query(
+        resource = "campaign",
+        select_fields=select_fields,
+        start_date=start_date,
+        end_date=end_date,
+        where_clauses=where_clauses,
+        order_by=[f"{time_seg_string} ASC"],
+    )
 
 # account
 def account_report_query(start_date, end_date, time_seg_string):
@@ -93,7 +129,7 @@ def account_report_query(start_date, end_date, time_seg_string):
         """ 
 
 # ad_level, does not include PMax (pmax technically doesn't have 'ad groups')
-def ad_group_ad_query(start_date, end_date, time_seg_string):
+def ad_group_ad_query(start_date, end_date, time_seg_string, **kwargs):
     return f"""
         SELECT
             {time_seg_string},

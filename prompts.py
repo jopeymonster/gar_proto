@@ -98,6 +98,7 @@ def data_review(report_details, **toggles):
          - include_campaign
          - include_adgroup
          - include_device
+         - aggregate_channels
         """
         date_opt, start_date, end_date, time_seg, account_scope = report_details
         # all report options
