@@ -317,9 +317,11 @@ def arc_report_single(gads_service, client, start_date, end_date, time_seg, cust
     # GAQL query
     arc_report_query = queries.arc_report_query(start_date, end_date, time_seg_string, **kwargs)
 
+    """
     # debug query builder
     print(arc_report_query)
     input("\nPause for debug - press ENTER to continue or input 'exit' to exit: ")
+    """
 
     arc_query_response = gads_service.search_stream(customer_id=customer_id, query=arc_report_query)
     # initialize empty list
@@ -365,16 +367,16 @@ def arc_report_single(gads_service, client, start_date, end_date, time_seg, cust
             group_keys = ["Date", "Account name", "Customer ID", "Campaign type", "ARC"]
         else:
             group_keys = ["Date", "Account name", "Customer ID", "ARC"]
-    # Aggregate by key
-    aggregated = defaultdict(lambda: Decimal("0.00"))
-    for row in table_data:
-        key = tuple(row[k] for k in group_keys)
-        aggregated[key] += row["Cost"]
-    # convert aggregated dict into row of dicts
-    table_data = [
-        dict(zip(group_keys, key), Cost=value) for key, value in aggregated.items()
-    ]
-    headers = group_keys + ["Cost"]
+        # Aggregate by key
+        aggregated = defaultdict(lambda: Decimal("0.00"))
+        for row in table_data:
+            key = tuple(row[k] for k in group_keys)
+            aggregated[key] += row["Cost"]
+        # convert aggregated dict into row of dicts
+        table_data = [
+            dict(zip(group_keys, key), Cost=value) for key, value in aggregated.items()
+        ]
+        headers = group_keys + ["Cost"]
     # sort by date ascending, cost descending
     table_data_sorted = sorted(
         table_data, 
