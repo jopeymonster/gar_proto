@@ -113,28 +113,3 @@ def data_review(report_details, **toggles):
             print(f"{key}: {value}")
         input("\nPause for debug - press ENTER to continue or input 'exit' to exit: ")
         return
-
-""" replaced by single function 'data_review'
-def datetime_debug(account_scope, date_opt, start_date, end_date, time_seg):
-    print("\nServices params passback after prompts:\n"
-        f"account_scope: {account_scope}\n"
-        f"date_opt: {date_opt}\n"
-        f"time_seg: {time_seg}\n"
-        f"start_date: {start_date}\n"
-        f"end_date: {end_date}\n")
-        # f"time_condition: {time_condition}")
-    input("\nPause for debug - press ENTER to continue or input 'exit' to exit: ")
-    return
-
-def arc_debug(account_scope, date_opt, start_date, end_date, time_seg, include_channel_types):
-    print("\nServices params passback after prompts:\n"
-        f"account_scope: {account_scope}\n"
-        f"date_opt: {date_opt}\n"
-        f"time_seg: {time_seg}\n"
-        f"start_date: {start_date}\n"
-        f"end_date: {end_date}\n"
-        f"include_channel_types: {include_channel_types}")
-        # f"time_condition: {time_condition}")
-    input("\nPause for debug - press ENTER to continue or input 'exit' to exit: ")
-    return
-"""

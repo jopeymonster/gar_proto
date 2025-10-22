@@ -597,6 +597,22 @@ def ad_level_report_single(gads_service, client, start_date, end_date, time_seg,
             )
             date_value = getattr(row.segments, time_seg)
             # build dict struct
+            cost_value = Decimal(row.metrics.cost_micros / 1e6).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            impressions = getattr(row.metrics, "impressions", 0) or 0
+            avg_cpm_value = (
+                Decimal(row.metrics.average_cpm / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP)
+                if impressions else Decimal("0.000")
+            )
+            clicks = getattr(row.metrics, "clicks", 0) or 0
+            avg_cpc_value = (
+                Decimal(row.metrics.average_cpc / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP)
+                if clicks else Decimal("0.000")
+            )
+            video_views = getattr(row.metrics, "video_views", 0) or 0
+            conversions_metric = Decimal(str(getattr(row.metrics, "conversions", 0) or 0))
+            conv_value_metric = Decimal(str(getattr(row.metrics, "conversions_value", 0) or 0)).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP
+            )
             ad_group_ad_dict = {
                 "Date": date_value,
                 "Customer ID": row.customer.id,
@@ -610,17 +626,17 @@ def ad_level_report_single(gads_service, client, start_date, end_date, time_seg,
                 "Ad group type": ad_group_type,
                 "Ad ID": row.ad_group_ad.ad.id,
                 "Ad type": ad_type,
-                "Cost": Decimal(row.metrics.cost_micros / 1e6).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
-                "Impr.": row.metrics.impressions,
+                "Cost": cost_value,
+                "Impr.": impressions,
                 "Abs Top Imp%": row.metrics.absolute_top_impression_percentage,
                 "Top Imp%": row.metrics.top_impression_percentage,
-                "Avg CPM": Decimal(row.metrics.average_cpm / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
-                "Interactions": row.metrics.interactions,
-                "Clicks": row.metrics.clicks,
-                "Avg CPC": Decimal(row.metrics.average_cpc / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
-                "Video Views": row.metrics.video_views,
-                "Conversions": row.metrics.conversions,
-                "Conv. value": row.metrics.conversions_value,
+                "Avg CPM": avg_cpm_value,
+                "Interactions": getattr(row.metrics, "interactions", 0) or 0,
+                "Clicks": clicks,
+                "Avg CPC": avg_cpc_value,
+                "Video Views": video_views,
+                "Conversions": conversions_metric,
+                "Conv. value": conv_value_metric,
                 }
             table_data.append(ad_group_ad_dict)
     # campaign scoped query for pmax campaigns
@@ -635,6 +651,22 @@ def ad_level_report_single(gads_service, client, start_date, end_date, time_seg,
                 if hasattr(row.campaign, 'advertising_channel_type') else 'UNDEFINED'
             )
             date_value = getattr(row.segments, time_seg)
+            cost_value = Decimal(row.metrics.cost_micros / 1e6).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            impressions = getattr(row.metrics, "impressions", 0) or 0
+            avg_cpm_value = (
+                Decimal(row.metrics.average_cpm / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP)
+                if impressions else Decimal("0.000")
+            )
+            clicks = getattr(row.metrics, "clicks", 0) or 0
+            avg_cpc_value = (
+                Decimal(row.metrics.average_cpc / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP)
+                if clicks else Decimal("0.000")
+            )
+            video_views = getattr(row.metrics, "video_views", 0) or 0
+            conversions_metric = Decimal(str(getattr(row.metrics, "conversions", 0) or 0))
+            conv_value_metric = Decimal(str(getattr(row.metrics, "conversions_value", 0) or 0)).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP
+            )
             pmax_dict = {
                 "Date": date_value,
                 "Customer ID": row.customer.id,
@@ -648,17 +680,17 @@ def ad_level_report_single(gads_service, client, start_date, end_date, time_seg,
                 "Ad group type": "PERFORMANCE_MAX",
                 "Ad ID": row.campaign.id,  # PMAX placeholder
                 "Ad type": "PERFORMANCE_MAX",
-                "Cost": Decimal(row.metrics.cost_micros / 1e6).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
-                "Impr.": row.metrics.impressions,
+                "Cost": cost_value,
+                "Impr.": impressions,
                 "Abs Top Imp%": row.metrics.absolute_top_impression_percentage,
                 "Top Imp%": row.metrics.top_impression_percentage,
-                "Avg CPM": Decimal(row.metrics.average_cpm / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
-                "Interactions": row.metrics.interactions,
-                "Clicks": row.metrics.clicks,
-                "Avg CPC": Decimal(row.metrics.average_cpc / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
-                "Video Views": row.metrics.video_views,
-                "Conversions": row.metrics.conversions,
-                "Conv. value": row.metrics.conversions_value,
+                "Avg CPM": avg_cpm_value,
+                "Interactions": getattr(row.metrics, "interactions", 0) or 0,
+                "Clicks": clicks,
+                "Avg CPC": avg_cpc_value,
+                "Video Views": video_views,
+                "Conversions": conversions_metric,
+                "Conv. value": conv_value_metric,
             }
             table_data.append(pmax_dict)
     headers = [ "Date", "Customer ID", "Account name", "ARC"] # primary dimensions
@@ -681,13 +713,94 @@ def ad_level_report_single(gads_service, client, start_date, end_date, time_seg,
         "Conversions",
         "Conv. value",
     ]
-    filtered_data = [[row[h] for h in headers] for row in table_data]
-    # sort by: time index (0), descending cost
-    table_data_sorted = sorted(
-        filtered_data,
-        key=lambda r:(r[0], -float(r[headers.index("Cost")]))
+    metric_fields = {
+        "Cost",
+        "Impr.",
+        "Abs Top Imp%",
+        "Top Imp%",
+        "Avg CPM",
+        "Interactions",
+        "Clicks",
+        "Avg CPC",
+        "Video Views",
+        "Conversions",
+        "Conv. value",
+    }
+    dimension_fields = [h for h in headers if h not in metric_fields]
+    aggregated = {}
+    for row in table_data:
+        key = tuple(row.get(field) for field in dimension_fields)
+        if key not in aggregated:
+            aggregated[key] = {field: row.get(field) for field in dimension_fields}
+            aggregated[key].update({
+                "Cost": Decimal("0.00"),
+                "Impr.": 0,
+                "Interactions": 0,
+                "Clicks": 0,
+                "Video Views": 0,
+                "Conversions": Decimal("0"),
+                "Conv. value": Decimal("0.00"),
+                "_abs_top_weight": Decimal("0"),
+                "_top_weight": Decimal("0"),
+            })
+        entry = aggregated[key]
+        cost_value = row.get("Cost", Decimal("0.00"))
+        if not isinstance(cost_value, Decimal):
+            cost_value = Decimal(str(cost_value))
+        entry["Cost"] += cost_value
+        impressions = row.get("Impr.", 0) or 0
+        entry["Impr."] += impressions
+        entry["Interactions"] += row.get("Interactions", 0) or 0
+        clicks = row.get("Clicks", 0) or 0
+        entry["Clicks"] += clicks
+        entry["Video Views"] += row.get("Video Views", 0) or 0
+        conversions_value = row.get("Conversions", Decimal("0"))
+        if not isinstance(conversions_value, Decimal):
+            conversions_value = Decimal(str(conversions_value))
+        entry["Conversions"] += conversions_value
+        conv_value_metric = row.get("Conv. value", Decimal("0.00"))
+        if not isinstance(conv_value_metric, Decimal):
+            conv_value_metric = Decimal(str(conv_value_metric))
+        entry["Conv. value"] += conv_value_metric
+        abs_top_is_value = Decimal(str(row.get("Abs Top Imp%") or 0))
+        top_is_pct_value = Decimal(str(row.get("Top Imp%") or 0))
+        entry["_abs_top_weight"] += abs_top_is_value * Decimal(impressions)
+        entry["_top_weight"] += top_is_pct_value * Decimal(impressions)
+    aggregated_rows = []
+    for entry in aggregated.values():
+        impressions = entry.get("Impr.", 0)
+        clicks = entry.get("Clicks", 0)
+        cost_value = entry.get("Cost", Decimal("0.00"))
+        abs_top_weight = entry.pop("_abs_top_weight", Decimal("0"))
+        top_weight = entry.pop("_top_weight", Decimal("0"))
+        entry["Cost"] = cost_value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        conversions_value = entry.get("Conversions", Decimal("0"))
+        entry["Conversions"] = conversions_value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        conv_value_total = entry.get("Conv. value", Decimal("0.00"))
+        entry["Conv. value"] = conv_value_total.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        entry["Avg CPC"] = (
+            (entry["Cost"] / Decimal(clicks)).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP)
+            if clicks else Decimal("0.000")
+        )
+        entry["Avg CPM"] = (
+            ((entry["Cost"] / Decimal(impressions)) * Decimal("1000")).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP)
+            if impressions else Decimal("0.000")
+        )
+        entry["Abs Top Imp%"] = (
+            (abs_top_weight / Decimal(impressions)).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+            if impressions else Decimal("0")
+        )
+        entry["Top Imp%"] = (
+            (top_weight / Decimal(impressions)).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+            if impressions else Decimal("0")
+        )
+        aggregated_rows.append(entry)
+    aggregated_rows_sorted = sorted(
+        aggregated_rows,
+        key=lambda r:(r.get("Date"), -float(r.get("Cost", Decimal("0"))))
     )
-    return table_data_sorted, headers
+    filtered_data = [[row.get(h) for h in headers] for row in aggregated_rows_sorted]
+    return filtered_data, headers
 
 def ad_level_report_all(gads_service, client, start_date, end_date, time_seg, accounts_info, **kwargs):
     """
@@ -831,14 +944,21 @@ def click_view_report_single(gads_service, client, start_date, end_date, time_se
     if include_device_info:
         headers.append("device")
     headers += ["click type", "clicks"] # metrics
-    filtered_data = [[row.get(h) for h in headers] for row in table_data]
-    # sort by: time index (0), descending clicks
-    clicks_idx = headers.index("clicks")
-    table_data_sorted = sorted(
-        filtered_data,
-        key=lambda r: (r[0], -float(r[clicks_idx]))
-        )
-    return table_data_sorted, headers
+    metric_fields = {"clicks"}
+    dimension_fields = [h for h in headers if h not in metric_fields]
+    aggregated = {}
+    for row in table_data:
+        key = tuple(row.get(field) for field in dimension_fields)
+        if key not in aggregated:
+            aggregated[key] = {field: row.get(field) for field in dimension_fields}
+            aggregated[key]["clicks"] = 0
+        aggregated[key]["clicks"] += row.get("clicks", 0) or 0
+    aggregated_rows = sorted(
+        aggregated.values(),
+        key=lambda r: (r.get("Date"), -float(r.get("clicks", 0)))
+    )
+    filtered_data = [[row.get(h) for h in headers] for row in aggregated_rows]
+    return filtered_data, headers
 
 def click_view_report_all(gads_service, client, start_date, end_date, time_seg, accounts_info, **kwargs):
     """
@@ -935,6 +1055,25 @@ def paid_org_search_term_report_single(gads_service, client, start_date, end_dat
                 device_type_enum.Device.Name(row.segments.device)
                 if hasattr(row.segments, 'device') else 'UNDEFINED'
             )
+            organic_queries = getattr(row.metrics, "organic_queries", 0) or 0
+            organic_impressions = getattr(row.metrics, "organic_impressions", 0) or 0
+            organic_clicks = getattr(row.metrics, "organic_clicks", 0) or 0
+            paid_impressions = getattr(row.metrics, "impressions", 0) or 0
+            paid_clicks = getattr(row.metrics, "clicks", 0) or 0
+            combined_queries = getattr(row.metrics, "combined_queries", 0) or 0
+            combined_clicks = getattr(row.metrics, "combined_clicks", 0) or 0
+            combined_clicks_per_query = getattr(row.metrics, "combined_clicks_per_query", 0) or 0
+            organic_impr_per_query = getattr(row.metrics, "organic_impressions_per_query", 0) or 0
+            organic_clicks_per_query = getattr(row.metrics, "organic_clicks_per_query", 0) or 0
+            paid_ctr_raw = getattr(row.metrics, "ctr", 0) or 0
+            avg_cpc_micros = getattr(row.metrics, "average_cpc", 0) or 0
+            total_impressions = organic_impressions + paid_impressions
+            avg_cpc_value = (
+                (Decimal(avg_cpc_micros) / Decimal("1000000")).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP)
+                if paid_clicks else Decimal("0.000")
+            )
+            keyword_info = getattr(getattr(row.segments, "keyword", None), "info", None)
+            keyword_text = getattr(keyword_info, "text", None) if keyword_info else None
             # build row dict with response
             paid_org_search_term_dict = {
                 "Date": date_value,
@@ -948,20 +1087,20 @@ def paid_org_search_term_report_single(gads_service, client, start_date, end_dat
                 "device": device_type,
                 "SERP type": serp_type,
                 "keyword match type": keyword_match_type,
-                "keyword text": row.segments.keyword.info.text,
-                "org queries": row.metrics.organic_queries,
-                "org impr": row.metrics.organic_impressions,
-                "org impr per query": row.metrics.organic_impressions_per_query,
-                "org clicks": row.metrics.organic_clicks,
-                "org clicks per query": row.metrics.organic_clicks_per_query,
-                "paid impr": row.metrics.impressions, # paid impressions
-                "paid clicks": row.metrics.clicks, # paid clicks
-                "paid ctr": row.metrics.ctr, # paid ctr
-                "avg cpc": Decimal(row.metrics.average_cpc / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
-                "total queries": row.metrics.combined_queries,
-                "total impr": (row.metrics.organic_impressions+row.metrics.impressions), # total combined impressions
-                "total clicks": row.metrics.combined_clicks,
-                "total clicks per query": row.metrics.combined_clicks_per_query,
+                "keyword text": keyword_text,
+                "org queries": organic_queries,
+                "org impr": organic_impressions,
+                "org impr per query": organic_impr_per_query,
+                "org clicks": organic_clicks,
+                "org clicks per query": organic_clicks_per_query,
+                "paid impr": paid_impressions,
+                "paid clicks": paid_clicks,
+                "paid ctr": paid_ctr_raw,
+                "avg cpc": avg_cpc_value,
+                "total queries": combined_queries,
+                "total impr": total_impressions,
+                "total clicks": combined_clicks,
+                "total clicks per query": combined_clicks_per_query,
             }
             # append dict
             table_data.append(paid_org_search_term_dict)
@@ -988,18 +1127,93 @@ def paid_org_search_term_report_single(gads_service, client, start_date, end_dat
                 "paid clicks",
                 "paid ctr",
                 "avg cpc",
+                "total cost",
                 "total queries",
                 "total impr",
                 "total clicks",
                 "total clicks per query"]
-    filtered_data = [[row.get(h) for h in headers] for row in table_data]
-    # sort by: time index (0), descending total combined clicks
-    comb_clicks_idx = headers.index("total clicks")
-    table_data_sorted = sorted(
-        filtered_data,
-        key=lambda r: (r[0], -float(r[comb_clicks_idx]))
+    metric_fields = {
+        "org queries",
+        "org impr",
+        "org impr per query",
+        "org clicks",
+        "org clicks per query",
+        "paid impr",
+        "paid clicks",
+        "paid ctr",
+        "avg cpc",
+        "total cost",
+        "total queries",
+        "total impr",
+        "total clicks",
+        "total clicks per query",
+    }
+    dimension_fields = [h for h in headers if h not in metric_fields]
+    aggregated = {}
+    for row in table_data:
+        key = tuple(row.get(field) for field in dimension_fields)
+        if key not in aggregated:
+            aggregated[key] = {field: row.get(field) for field in dimension_fields}
+            aggregated[key].update({
+                "org queries": 0,
+                "org impr": 0,
+                "org clicks": 0,
+                "paid impr": 0,
+                "paid clicks": 0,
+                "total queries": 0,
+                "total impr": 0,
+                "total clicks": 0,
+                "_total_cost": Decimal("0.00"),
+            })
+        entry = aggregated[key]
+        entry["org queries"] += row.get("org queries", 0) or 0
+        entry["org impr"] += row.get("org impr", 0) or 0
+        entry["org clicks"] += row.get("org clicks", 0) or 0
+        entry["paid impr"] += row.get("paid impr", 0) or 0
+        paid_clicks = row.get("paid clicks", 0) or 0
+        entry["paid clicks"] += paid_clicks
+        entry["total queries"] += row.get("total queries", 0) or 0
+        entry["total impr"] += row.get("total impr", 0) or 0
+        entry["total clicks"] += row.get("total clicks", 0) or 0
+        avg_cpc_value = row.get("avg cpc", Decimal("0.000"))
+        if not isinstance(avg_cpc_value, Decimal):
+            avg_cpc_value = Decimal(str(avg_cpc_value))
+        entry["_total_cost"] += avg_cpc_value * Decimal(paid_clicks)
+    aggregated_rows = []
+    for entry in aggregated.values():
+        org_queries = entry.get("org queries", 0)
+        paid_impr = entry.get("paid impr", 0)
+        paid_clicks = entry.get("paid clicks", 0)
+        total_queries = entry.get("total queries", 0)
+        total_cost_raw = entry.pop("_total_cost", Decimal("0.00"))
+        entry["org impr per query"] = (
+            (Decimal(entry["org impr"]) / Decimal(org_queries)).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+            if org_queries else Decimal("0")
         )
-    return table_data_sorted, headers
+        entry["org clicks per query"] = (
+            (Decimal(entry["org clicks"]) / Decimal(org_queries)).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+            if org_queries else Decimal("0")
+        )
+        entry["paid ctr"] = (
+            (Decimal(paid_clicks) / Decimal(paid_impr)).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+            if paid_impr else Decimal("0")
+        )
+        entry["avg cpc"] = (
+            (total_cost_raw / Decimal(paid_clicks)).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP)
+            if paid_clicks else Decimal("0.000")
+        )
+        entry["total cost"] = total_cost_raw.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        entry["total clicks per query"] = (
+            (Decimal(entry["total clicks"]) / Decimal(total_queries)).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+            if total_queries else Decimal("0")
+        )
+        aggregated_rows.append(entry)
+    aggregated_rows_sorted = sorted(
+        aggregated_rows,
+        key=lambda r: (r.get("Date"), -float(r.get("total clicks", 0)))
+    )
+    filtered_data = [[row.get(h) for h in headers] for row in aggregated_rows_sorted]
+    return filtered_data, headers
 
 def paid_org_search_term_report_all(gads_service, client, start_date, end_date, time_seg, accounts_info, **kwargs):
     """
