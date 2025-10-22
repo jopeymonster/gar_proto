@@ -368,7 +368,7 @@ def arc_report_single(gads_service, client, start_date, end_date, time_seg, cust
         else:
             group_keys = ["Date", "Account name", "Customer ID", "ARC"]
         # Aggregate by key
-        aggregated = defaultdict(lambda: Decimal("0.00"))
+        aggregated = defaultdict(lambda: Decimal("0.00")) # <--- EVALUATE: this may be affecting cost calc
         for row in table_data:
             key = tuple(row[k] for k in group_keys)
             aggregated[key] += row["Cost"]
@@ -448,6 +448,13 @@ def account_report_single(gads_service, client, start_date, end_date, time_seg, 
     table_data = []
     # GAQL query
     account_report_query = queries.account_report_query(start_date, end_date, time_seg_string)
+
+    """
+    # debug query builder
+    print(account_report_query)
+    input("\nPause for debug - press ENTER to continue or input 'exit' to exit: ")
+    """
+
     # fetch data and populate the table_data list
     account_report_response = gads_service.search_stream(customer_id=customer_id, query=account_report_query)
     for data in account_report_response:
@@ -778,6 +785,8 @@ def click_view_report_single(gads_service, client, start_date, end_date, time_se
                 device_type_enum.Device.Name(row.segments.device)
                 if hasattr(row.segments, 'device') else 'UNDEFINED'
             )
+            # cleaning needed for text, returning values with '=' (also '+' but those are bid modifiers from old targets)
+            keyword_text = (row.click_view.keyword_info.text).strip() if getattr(row.click_view, "keyword_info", None) else None
             # build row dict with response
             click_view_dict = {
                 "Date": date_value,
@@ -792,7 +801,7 @@ def click_view_report_single(gads_service, client, start_date, end_date, time_se
                 "gclid": row.click_view.gclid,
                 # "keyword target": row.click_view.keyword, # needs resource parsing
                 "keyword match type": keyword_match_type,
-                "keyword text": (row.click_view.keyword_info.text).strip() if getattr(row.click_view, "keyword_info", None) else None,
+                "keyword text": keyword_text,
                 "SERP #": row.click_view.page_number,
                 # "loc_country": row.click_view.location_of_presence.country,
                 # "loc_region": row.click_view.location_of_presence.region,
