@@ -58,6 +58,7 @@ def get_account_properties(accounts_info):
     print(f"Selected prop info:\n"
           f"account_name: {account_name}\n"
           f"account_id: {account_id}\n")
+    input("If correct, press ENTER to continue or input 'exit' to exit: ")
     return account_info
 
 def display_account_list(accounts_info):

@@ -156,7 +156,7 @@ def performance_menu(gads_service, client, full_accounts_info):
             prompts.execution_time(start_time, end_time)
             # handle data
             helpers.data_handling_options(all_account_data, headers, auto_view=False)
-
+    # Ads report
     elif report_opt == 'ads':
         print("Ads Report selected...")
         report_details = prompts.report_details_prompt(report_opt)
@@ -204,6 +204,7 @@ def performance_menu(gads_service, client, full_accounts_info):
             prompts.execution_time(start_time, end_time)
             # handle data
             helpers.data_handling_options(all_account_data, headers, auto_view=False)
+    # click_view/GCLID report
     elif report_opt == 'clickview':
         print("GCLID/ClickView Report selected...")
         report_details = prompts.report_details_prompt(report_opt)
@@ -251,6 +252,7 @@ def performance_menu(gads_service, client, full_accounts_info):
             prompts.execution_time(start_time, end_time)
             # handle data
             helpers.data_handling_options(all_account_data, headers, auto_view=False)
+    # paid/org search terms report
     elif report_opt == 'paid_organic_terms':
         print("Paid and Organic Search Terms Report selected...")
         report_details = prompts.report_details_prompt(report_opt)
