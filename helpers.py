@@ -4,6 +4,7 @@ import sys
 import re
 import pydoc
 from datetime import datetime, date, timedelta
+from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 from tabulate import tabulate
 
@@ -32,6 +33,18 @@ else:
     original_input = __builtins__.input
     __builtins__.input = custom_input
 
+MICROS_PER_UNIT = Decimal("1000000")
+
+def micros_to_decimal(micros, quantize=None, rounding=ROUND_HALF_UP):
+    """Convert a micro-amount value to a Decimal without float precision loss."""
+    if micros in (None, ""):
+        value = Decimal("0")
+    else:
+        value = Decimal(str(micros)) / MICROS_PER_UNIT
+    if quantize is not None:
+        return value.quantize(quantize, rounding=rounding)
+    return value
+
 # account/account selection
 def get_account_properties(accounts_info):
     """
@@ -45,7 +58,6 @@ def get_account_properties(accounts_info):
     print(f"Selected prop info:\n"
           f"account_name: {account_name}\n"
           f"account_id: {account_id}\n")
-    input("Pause for debug...")
     return account_info
 
 def display_account_list(accounts_info):

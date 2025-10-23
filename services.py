@@ -160,6 +160,8 @@ def get_campaign_groups(gads_service, client, customer_id):
 
 # exceptions wrapper
 def handle_exceptions(func):
+    def print_error(func_name, error):
+        print(f"\nError in function '{func_name}': {repr(error)} - Exiting...\n")
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
@@ -196,16 +198,12 @@ def handle_exceptions(func):
             print_error(func.__name__, e)
         except ValueError as e:
             print_error(func.__name__, e)
-        except KeyboardInterrupt as e:
-            print_error(func.__name__, e)
         except FileNotFoundError as e:
             print_error(func.__name__, e)
         except AttributeError as e:
-            print_error(func.__name__, )
+            print_error(func.__name__, e)
         except Exception as e:
             print_error(func.__name__, e)
-    def print_error(func_name, error):
-        print(f"\nError in function '{func_name}': {repr(error)} - Exiting...\n")
     return wrapper
 
 """
@@ -316,13 +314,6 @@ def arc_report_single(gads_service, client, start_date, end_date, time_seg, cust
     include_campaign_info = kwargs.get("include_campaign_info", False)
     # GAQL query
     arc_report_query = queries.arc_report_query(start_date, end_date, time_seg_string, **kwargs)
-
-    """
-    # debug query builder
-    print(arc_report_query)
-    input("\nPause for debug - press ENTER to continue or input 'exit' to exit: ")
-    """
-
     arc_query_response = gads_service.search_stream(customer_id=customer_id, query=arc_report_query)
     # initialize empty list
     table_data = []
@@ -335,7 +326,7 @@ def arc_report_single(gads_service, client, start_date, end_date, time_seg, cust
                 if hasattr(row.campaign, "advertising_channel_type") else "UNDEFINED"
             )
             date_value = getattr(row.segments, time_seg)
-            cost_value = Decimal(row.metrics.cost_micros / 1e6).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            cost_value = helpers.micros_to_decimal(row.metrics.cost_micros, Decimal("0.01"))
             # build dict, primary dims/metrics first
             arc_dict = {
                 "Date": date_value,
@@ -448,32 +439,31 @@ def account_report_single(gads_service, client, start_date, end_date, time_seg, 
     table_data = []
     # GAQL query
     account_report_query = queries.account_report_query(start_date, end_date, time_seg_string)
-
-    """
-    # debug query builder
-    print(account_report_query)
-    input("\nPause for debug - press ENTER to continue or input 'exit' to exit: ")
-    """
-
     # fetch data and populate the table_data list
     account_report_response = gads_service.search_stream(customer_id=customer_id, query=account_report_query)
     for data in account_report_response:
         for row in data.results:
             date_value = getattr(row.segments, time_seg)
             # build dict struct
+            clicks = getattr(row.metrics, "clicks", 0) or 0
+            invalid_clicks = getattr(row.metrics, "invalid_clicks", 0) or 0
+            invalid_click_pct = (
+                (Decimal(invalid_clicks) / Decimal(clicks)).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+                if clicks else Decimal("0.0000")
+            )
             account_report_dict = {
                 "date": date_value,
                 "account": row.customer.descriptive_name,
                 "customer id": row.customer.id,
-                "cost": Decimal(row.metrics.cost_micros / 1e6).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
-                "clicks": row.metrics.clicks,
-                "invalid clicks": row.metrics.invalid_clicks,
-                "invalid click %": (row.metrics.invalid_clicks / row.metrics.clicks), # invalid clicks %
+                "cost": helpers.micros_to_decimal(row.metrics.cost_micros, Decimal("0.01")),
+                "clicks": clicks,
+                "invalid clicks": invalid_clicks,
+                "invalid click %": invalid_click_pct,
                 "interactions": row.metrics.interactions,
                 "impressions": row.metrics.impressions,
                 "ctr": row.metrics.ctr,
-                "avg cpc": Decimal(row.metrics.average_cpc / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
-                "avg cpm": Decimal(row.metrics.average_cpm / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
+                "avg cpc": helpers.micros_to_decimal(row.metrics.average_cpc, Decimal("0.001")),
+                "avg cpm": helpers.micros_to_decimal(row.metrics.average_cpm, Decimal("0.001")),
                 "abs top is": row.metrics.absolute_top_impression_percentage,
                 "top is %": row.metrics.top_impression_percentage,
                 }
@@ -597,15 +587,15 @@ def ad_level_report_single(gads_service, client, start_date, end_date, time_seg,
             )
             date_value = getattr(row.segments, time_seg)
             # build dict struct
-            cost_value = Decimal(row.metrics.cost_micros / 1e6).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            cost_value = helpers.micros_to_decimal(row.metrics.cost_micros, Decimal("0.01"))
             impressions = getattr(row.metrics, "impressions", 0) or 0
             avg_cpm_value = (
-                Decimal(row.metrics.average_cpm / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP)
+                helpers.micros_to_decimal(row.metrics.average_cpm, Decimal("0.001"))
                 if impressions else Decimal("0.000")
             )
             clicks = getattr(row.metrics, "clicks", 0) or 0
             avg_cpc_value = (
-                Decimal(row.metrics.average_cpc / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP)
+                helpers.micros_to_decimal(row.metrics.average_cpc, Decimal("0.001"))
                 if clicks else Decimal("0.000")
             )
             video_views = getattr(row.metrics, "video_views", 0) or 0
@@ -651,15 +641,15 @@ def ad_level_report_single(gads_service, client, start_date, end_date, time_seg,
                 if hasattr(row.campaign, 'advertising_channel_type') else 'UNDEFINED'
             )
             date_value = getattr(row.segments, time_seg)
-            cost_value = Decimal(row.metrics.cost_micros / 1e6).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            cost_value = helpers.micros_to_decimal(row.metrics.cost_micros, Decimal("0.01"))
             impressions = getattr(row.metrics, "impressions", 0) or 0
             avg_cpm_value = (
-                Decimal(row.metrics.average_cpm / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP)
+                helpers.micros_to_decimal(row.metrics.average_cpm, Decimal("0.001"))
                 if impressions else Decimal("0.000")
             )
             clicks = getattr(row.metrics, "clicks", 0) or 0
             avg_cpc_value = (
-                Decimal(row.metrics.average_cpc / 1e6).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP)
+                helpers.micros_to_decimal(row.metrics.average_cpc, Decimal("0.001"))
                 if clicks else Decimal("0.000")
             )
             video_views = getattr(row.metrics, "video_views", 0) or 0
@@ -1069,7 +1059,7 @@ def paid_org_search_term_report_single(gads_service, client, start_date, end_dat
             avg_cpc_micros = getattr(row.metrics, "average_cpc", 0) or 0
             total_impressions = organic_impressions + paid_impressions
             avg_cpc_value = (
-                (Decimal(avg_cpc_micros) / Decimal("1000000")).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP)
+                helpers.micros_to_decimal(avg_cpc_micros, Decimal("0.001"))
                 if paid_clicks else Decimal("0.000")
             )
             keyword_info = getattr(getattr(row.segments, "keyword", None), "info", None)
@@ -1236,7 +1226,7 @@ def paid_org_search_term_report_all(gads_service, client, start_date, end_date, 
     for customer_id, account_descriptive in accounts_info.items():
         print(f"Processing {account_descriptive}...")
         try:
-            table_data, headers = click_view_report_single(
+            table_data, headers = paid_org_search_term_report_single(
                 gads_service, client, start_date, end_date, time_seg, customer_id, **kwargs
             )
             all_data.extend(table_data)
