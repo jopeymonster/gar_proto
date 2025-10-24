@@ -1,0 +1,30 @@
+name: Lint
+
+on:
+  pull_request:
+  push:
+    branches: [ develop, main, issues, codex, f01.1 ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install linting tools
+        run: pip install ruff
+      - name: Run lint
+        run: ruff check .
+
+  no-emoji:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for emojis
+        run: |
+          if git grep -qP '[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{2600}-\x{26FF}]'; then
+            echo "Emoji detected in codebase. Please remove all emojis."
+            exit 1
+          fi
