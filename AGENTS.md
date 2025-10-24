@@ -24,3 +24,13 @@ All AI agents must also follow the [CONTRIBUTING.md](CONTRIBUTING.md) guidelines
 - Run `pytest` before submitting PRs.
 - No failing tests or lint errors allowed.
 - Prefer test-driven updates when modifying critical functions.
+
+### Repository Hygiene
+- **Do not commit** caches, environment directories, or IDE-specific files:
+  - `.ruff_cache/`, `.pytest_cache/`, `.cache/`
+  - `venv/`, `.venv/`, `env/`, `ENV/`
+  - `.DS_Store`, `.idea/`, `.vscode/`
+- Do not commit build/distribution artifacts (`dist/`, `build/`, `*.egg-info/`).
+- Sensitive/auth files (e.g., `*secret*`, `*cred*`, `*service-account.json`) must never be committed.
+- Always respect `.gitignore`.
+

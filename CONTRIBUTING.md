@@ -26,3 +26,19 @@ These rules apply to **all contributions**, human or AI.
 - Run `pytest` locally before submitting a PR.
 - No failing tests or linting errors.
 - Add or update tests when introducing new functionality or fixing bugs.
+
+## Repository Hygiene ✅
+To keep the repository clean and consistent:
+
+- **Do not commit**:
+  - Virtual environments (e.g., `venv/`, `.venv/`, `ENV/`, `gads/`)
+  - Cache directories (`.ruff_cache/`, `.pytest_cache/`, `.cache/`)
+  - OS-specific junk (`.DS_Store`, `.idea/`, `.vscode/`)
+  - Build/distribution artifacts (`dist/`, `build/`, `*.egg-info/`)
+
+- Follow the `.gitignore` file — if you’re not sure whether something should be tracked, ask before committing.
+
+- Sensitive or auth-related files must **never** be committed:
+  - `*secret*`, `*cred*`, `*authorization*`
+  - Google auth configs (`*service-account.json`, `*client-secret.json`, `*google-ads.yaml`)
+

@@ -66,6 +66,7 @@ venv.bak/
 .venv/
 .env
 .venv
+gads/   # added: your named venv
 
 # PyInstaller
 *.manifest
@@ -169,3 +170,7 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+# Ruff & pre-commit caches
+.ruff_cache/
+.cache/
