@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""Command-line entry points for the Google Ads Reporter prototype."""
+
 import argparse
 import sys
 import time
@@ -10,17 +12,29 @@ import services
 
 # MENUS
 def init_menu(yaml_loc=None):
+    """Start the interactive reporter experience.
+
+    The function authenticates against the Google Ads API, displays the
+    available accounts to the user, and transitions into the primary menu.
+
+    Args:
+        yaml_loc (str | None): Optional path to a Google Ads configuration
+            file. When ``None`` the default ``google-ads.yaml`` file within the
+            repository is used.
+
+    Returns:
+        None: Control flow continues into the menu loop.
+    """
+
     print(
         "\nGoogle Ads Reporter, developed by JDT using GAds API and gRPC\n"
         "NOTE: Enter 'exit' at any prompt will exit this reporting tool."
     )
     input("Press Enter When Ready...")
-    # generate service
     print("Authorization in progress...")
     gads_service, customer_service, client = services.generate_services(yaml_loc)
     print("Authorization complete!\n")
     print("Retrieving account information...")
-    # get accounts
     full_accounts_info = services.get_accounts(gads_service, customer_service, client)
     customer_list, account_headers, customer_dict, num_accounts = full_accounts_info
     print(
@@ -34,6 +48,21 @@ def init_menu(yaml_loc=None):
 
 
 def main_menu(gads_service, client, full_accounts_info):
+    """Route the user to the appropriate reporting menu.
+
+    Args:
+        gads_service (GoogleAdsService): The authenticated Google Ads
+            service used for reporting queries.
+        client (GoogleAdsClient): The authenticated client instance used to
+            generate additional services.
+        full_accounts_info (tuple[list[list[str]], list[str], dict[str, str], int]):
+            Tuple containing the tabular account listing, column headers, the
+            mapping of customer IDs to names, and the number of accounts.
+
+    Returns:
+        None: Control flow continues into downstream menus.
+    """
+
     report_scope = prompts.report_menu()
     if report_scope == "1":
         print("\nPerformance Reporting selected.\n")
@@ -51,23 +80,22 @@ def main_menu(gads_service, client, full_accounts_info):
 
 
 def performance_menu(gads_service, client, full_accounts_info):
+    """Display and execute performance-related report options.
+
+    Args:
+        gads_service (GoogleAdsService): The Google Ads service used for
+            query execution.
+        client (GoogleAdsClient): Authenticated Google Ads client instance.
+        full_accounts_info (tuple[list[list[str]], list[str], dict[str, str], int]):
+            Tuple with account table data, display headers, account lookup
+            dictionary, and the number of available accounts.
+
+    Returns:
+        None: Data is processed and passed to downstream helpers.
+    """
+
     customer_list, account_headers, customer_dict, num_accounts = full_accounts_info
-    """
-    full_accounts_info tuple:
-        customer_list[0], list
-        account_headers[1], list
-        customer_dict[2], dict
-        num_accounts[3], int
-    """
     report_opt = prompts.report_opt_prompt()
-    """ 
-    Prompts list and returns below:
-        1 - 'arc'
-        2 - 'account'
-        3 - 'ads'
-        4 - 'clickview'
-        5 - 'paid_organic_terms'
-    """
     # ARC report
     if report_opt == "arc":
         print("ARC Report selected...")
@@ -82,7 +110,6 @@ def performance_menu(gads_service, client, full_accounts_info):
             # "include_device_info": helpers.include_device_info()
         }
 
-        # debug
         prompts.data_review(report_details, **kwargs)
 
         if account_scope == "single":
@@ -131,7 +158,6 @@ def performance_menu(gads_service, client, full_accounts_info):
             # "include_device_info": helpers.include_device_info()
         }
 
-        # debug
         prompts.data_review(report_details, **kwargs)
 
         if account_scope == "single":
@@ -179,7 +205,6 @@ def performance_menu(gads_service, client, full_accounts_info):
             # "include_device_info": helpers.include_device_info()
         }
 
-        # debug
         prompts.data_review(report_details, **kwargs)
 
         if account_scope == "single":
@@ -227,7 +252,6 @@ def performance_menu(gads_service, client, full_accounts_info):
             "include_device_info": helpers.include_device_info(),
         }
 
-        # debug
         prompts.data_review(report_details, **kwargs)
 
         if account_scope == "single":
@@ -322,29 +346,26 @@ def performance_menu(gads_service, client, full_accounts_info):
 
 
 def budget_menu(gads_service, client, full_accounts_info):
+    """Display budgeting report options and run the selected workflow.
+
+    Args:
+        gads_service (GoogleAdsService): The Google Ads service used for
+            executing reports.
+        client (GoogleAdsClient): Authenticated Google Ads client instance.
+        full_accounts_info (tuple[list[list[str]], list[str], dict[str, str], int]):
+            Tuple with account table data, headers, lookup dictionary, and the
+            count of accounts available to the user.
+
+    Returns:
+        None: Execution continues through subsequent reporting steps.
+    """
+
     customer_list, account_headers, customer_dict, num_accounts = full_accounts_info
-    """
-    full_accounts_info tuple:
-        customer_list[0], list
-        account_headers[1], list
-        customer_dict[2], dict
-        num_accounts[3], int
-    """
     report_opt = prompts.budget_opt_prompt()
-    """ 
-    Prompts list and returns below:
-        1 - 'budget'
-    """
     # budget report
     if report_opt == "budget":
-        """
-        report_date_details = helpers.get_timerange(force_single=False) # click_view only supports single day reporting
-        date_opt, start_date, end_date, time_seg = report_date_details
-        account_scope = prompts.account_scope_prompt() # returns 'single' or 'all'
-        """
         report_details = prompts.report_details_prompt(report_opt)
 
-        # debug
         prompts.data_review(report_details)
 
         date_opt, start_date, end_date, time_seg, account_scope = report_details
@@ -364,17 +385,6 @@ def budget_menu(gads_service, client, full_accounts_info):
                 customer_id=account_id,
             )
 
-            """            
-            table_data, headers = services.budget_report_single(
-                gads_service,
-                client,
-                start_date,
-                end_date,
-                time_seg,
-                customer_id=account_id # pass single accountID
-                )
-            """
-
             end_time = time.time()
             prompts.execution_time(start_time, end_time)
             # handle data
@@ -386,18 +396,6 @@ def budget_menu(gads_service, client, full_accounts_info):
             services.budget_report_all(
                 gads_service, client, start_date, end_date, time_seg, customer_dict
             )
-
-            """
-            all_account_data, headers = services.budget_report_all(
-                gads_service,
-                client,
-                start_date,
-                end_date,
-                time_seg,
-                customer_dict # pass all accounts
-                )
-            """
-
             end_time = time.time()
             prompts.execution_time(start_time, end_time)
             # handle data
@@ -409,20 +407,22 @@ def budget_menu(gads_service, client, full_accounts_info):
 
 
 def audit_menu(gads_service, client, full_accounts_info):
+    """Run account auditing prompts and associated service calls.
+
+    Args:
+        gads_service (GoogleAdsService): The Google Ads service used for
+            executing audit-related queries.
+        client (GoogleAdsClient): Authenticated Google Ads client instance.
+        full_accounts_info (tuple[list[list[str]], list[str], dict[str, str], int]):
+            Tuple containing the account table, headers, account lookup
+            dictionary, and count of accounts.
+
+    Returns:
+        None: Argument parsing triggers the interactive workflow.
+    """
+
     customer_list, account_headers, customer_dict, num_accounts = full_accounts_info
-    """
-    full_accounts_info tuple:
-        customer_list[0], list
-        account_headers[1], list
-        customer_dict[2], dict
-        num_accounts[3], int
-    """
     audit_opt = prompts.audit_opt_prompt()
-    """
-    1 = account labels
-    2 = campaign groups
-    3 = campaign, ad group labels and campaign groups
-    """
     if audit_opt == "1":
         print("Account Labels Only Audit selected...")
         account_info = helpers.get_account_properties(customer_dict)
@@ -459,8 +459,9 @@ def audit_menu(gads_service, client, full_accounts_info):
         print("Invalid input, please select one of the indicated options.")
 
 
-# @services.handle_exceptions
 def main():
+    """Execute the command-line interface for the Google Ads Reporter."""
+
     parser = argparse.ArgumentParser(
         prog="GAR",
         description="Google Ads Reporter",

@@ -1,9 +1,17 @@
 # -*- coding: utf-8 -*-
+"""User-facing prompts for interacting with the Google Ads Reporter."""
+
 import helpers
 
 
 # menu prompts
 def report_menu():
+    """Prompt the user to select the high-level report category.
+
+    Returns:
+        str: Raw string selection provided by the user.
+    """
+
     print(
         "Main Menu - Select from the options below:\n"
         "1. Performance Reporting\n"
@@ -17,6 +25,12 @@ def report_menu():
 
 
 def report_opt_prompt():
+    """Prompt the user to choose a performance reporting option.
+
+    Returns:
+        str: Keyword describing the selected report type.
+    """
+
     report_opt_list = ["arc", "account", "ads", "clickview", "paid_organic_terms"]
     while True:
         print(
@@ -42,6 +56,12 @@ def report_opt_prompt():
 
 
 def audit_opt_prompt():
+    """Prompt the user to select an auditing workflow.
+
+    Returns:
+        str: Raw string selection from the auditing menu.
+    """
+
     print(
         "Auditing Options:\n"
         "1. Account Labels List\n"
@@ -54,6 +74,12 @@ def audit_opt_prompt():
 
 
 def account_scope_prompt():
+    """Prompt the user to choose between single-account or all-account scope.
+
+    Returns:
+        str: ``"single"`` or ``"all"`` based on the selection.
+    """
+
     while True:
         print(
             "Generate a report for a single account or all accounts?\n"
@@ -72,6 +98,12 @@ def account_scope_prompt():
 
 
 def budget_opt_prompt():
+    """Prompt the user for available budget reporting options.
+
+    Returns:
+        str: Keyword describing the chosen budget report type.
+    """
+
     budget_opt_list = [
         "budget",
     ]
@@ -95,6 +127,16 @@ def budget_opt_prompt():
 
 
 def report_details_prompt(report_opt):
+    """Collect the full reporting context for the selected report option.
+
+    Args:
+        report_opt (str): Report option keyword.
+
+    Returns:
+        tuple[str, str, str, str, str]: Date description, start date, end date,
+        time segmentation, and account scope.
+    """
+
     if report_opt == "clickview":
         report_date_details = helpers.get_timerange(force_single=True)
     else:
@@ -107,24 +149,31 @@ def report_details_prompt(report_opt):
 
 # timer
 def execution_time(start_time, end_time):
+    """Display the elapsed time for a report.
+
+    Args:
+        start_time (float): Start timestamp from ``time.time``.
+        end_time (float): End timestamp from ``time.time``.
+
+    Returns:
+        None: Output is written directly to stdout.
+    """
+
     print(f"\nReport compiled - Execution time: {end_time - start_time:.2f} seconds\n")
 
 
 # debugs
 def data_review(report_details, **toggles):
-    """
-    Report prompt tuple positioning:
-    0. date_opt
-    1. start_date
-    2. end_date
-    3. time_seg
-    4. account_scope
-    toggles:
-     - include_channel_types
-     - include_campaign
-     - include_adgroup
-     - include_device
-     - aggregate_channels
+    """Display the collected prompt inputs for debugging purposes.
+
+    Args:
+        report_details (tuple): Tuple containing date description, start date,
+            end date, time segmentation, and account scope.
+        **toggles: Keyword arguments representing additional configuration
+            flags selected by the user.
+
+    Returns:
+        None: The function only prints debugging information.
     """
     date_opt, start_date, end_date, time_seg, account_scope = report_details
     # all report options
