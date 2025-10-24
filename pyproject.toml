@@ -1,0 +1,15 @@
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]      # pycodestyle, pyflakes, import sorting
+ignore = ["E501"]             # line length handled by formatter
+
+[tool.ruff.lint.isort]
+known-first-party = ["gar_proto"]  # replace with your actual package/module name
+combine-as-imports = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

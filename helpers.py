@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 import csv
-import sys
-import re
 import pydoc
-from datetime import datetime, date, timedelta
-from decimal import Decimal, ROUND_HALF_UP
+import re
+import sys
+from datetime import date, datetime, timedelta
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
+
 from tabulate import tabulate
 
 

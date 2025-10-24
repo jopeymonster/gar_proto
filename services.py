@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
-import requests
 from collections import defaultdict
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
+
+import requests
 from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
 from google.api_core.exceptions import (
-    TooManyRequests,
     ResourceExhausted,
+    TooManyRequests,
     Unauthenticated,
 )
+
 import helpers
 import queries
 
