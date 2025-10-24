@@ -23,4 +23,5 @@ repos:
         entry: pytest
         language: system
         types: [python]
+        args: [tests]
         stages: [pre-push]
