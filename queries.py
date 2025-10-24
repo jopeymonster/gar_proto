@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""GAQL query templates used by the Google Ads Reporter prototype."""
+
 
 # query builder
 def build_query(
@@ -9,11 +11,19 @@ def build_query(
     where_clauses: list[str] | None = None,
     order_by: list[str] | None = None,
 ) -> str:
-    """
-    GAQL query builder — segment-driven (no GROUP BY).
+    """Construct a GAQL query with basic filtering and ordering.
 
-    In GAQL, aggregation is determined by which attributes and segments
-    are present in SELECT.
+    Args:
+        resource (str): GAQL resource name (for example ``"campaign"``).
+        select_fields (list[str]): Field selection for the query.
+        start_date (str): Inclusive start date (``YYYY-MM-DD``).
+        end_date (str): Inclusive end date (``YYYY-MM-DD``).
+        where_clauses (list[str] | None): Additional predicates for the WHERE
+            clause.
+        order_by (list[str] | None): Optional ordering instructions.
+
+    Returns:
+        str: Fully assembled GAQL query string.
     """
     # SELECT
     query = "SELECT\n    " + ",\n    ".join(select_fields)
@@ -31,6 +41,8 @@ def build_query(
 
 # customer/account info
 def customer_client_query():
+    """Return a GAQL query listing non-manager customer accounts."""
+
     return """
     SELECT
         customer_client.client_customer,
@@ -48,9 +60,11 @@ def customer_client_query():
 
 # audting
 def label_query():
+    """Return a GAQL query fetching enabled labels."""
+
     return """
-    SELECT 
-        label.name, 
+    SELECT
+        label.name,
         label.id
     FROM label
     WHERE label.status = 'ENABLED'
@@ -59,6 +73,8 @@ def label_query():
 
 
 def camp_group_query():
+    """Return a GAQL query fetching enabled campaign groups."""
+
     return """
     SELECT
         campaign_group.name,
@@ -70,6 +86,8 @@ def camp_group_query():
 
 
 def label_audit_query():
+    """Return a GAQL query joining campaigns, ad groups, and labels."""
+
     return """
     SELECT
         customer.id,
@@ -91,6 +109,8 @@ def label_audit_query():
 
 # arc
 def arc_report_query(start_date, end_date, time_seg_string, **kwargs):
+    """Return a GAQL query for the ARC performance report."""
+
     select_fields = [
         time_seg_string,
         "customer.descriptive_name",
@@ -111,6 +131,8 @@ def arc_report_query(start_date, end_date, time_seg_string, **kwargs):
 
 
 def account_report_query(start_date, end_date, time_seg_string, **kwargs):
+    """Return a GAQL query for the account performance report."""
+
     select_fields = [
         time_seg_string,
         "customer.descriptive_name",
@@ -140,6 +162,8 @@ def account_report_query(start_date, end_date, time_seg_string, **kwargs):
 
 # ad_level, does not include PMax (pmax technically doesn't have 'ad groups')
 def ad_group_ad_query(start_date, end_date, time_seg_string, **kwargs):
+    """Return a GAQL query retrieving ad-level performance details."""
+
     select_fields = [
         time_seg_string,
         "customer.id",
@@ -182,6 +206,8 @@ def ad_group_ad_query(start_date, end_date, time_seg_string, **kwargs):
 
 # pmax query for ads_report
 def pmax_campaign_query(start_date, end_date, time_seg_string, **kwargs):
+    """Return a GAQL query focusing on Performance Max campaign metrics."""
+
     select_fields = [
         time_seg_string,
         "customer.id",
@@ -223,6 +249,8 @@ def pmax_campaign_query(start_date, end_date, time_seg_string, **kwargs):
 
 # click_view
 def click_view_query(start_date, end_date, time_seg_string, **kwargs):
+    """Return a GAQL query retrieving ClickView performance data."""
+
     select_fields = [
         time_seg_string,
         "customer.descriptive_name",
@@ -272,6 +300,8 @@ def click_view_query(start_date, end_date, time_seg_string, **kwargs):
 def paid_organic_search_term_view_query(
     start_date, end_date, time_seg_string, **kwargs
 ):
+    """Return a GAQL query for paid and organic search term metrics."""
+
     select_fields = [
         time_seg_string,
         "segments.search_engine_results_page_type",
