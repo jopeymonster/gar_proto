@@ -1562,9 +1562,9 @@ def budget_report_all(
 
 
 # Prototyping/testing
-"""
+
+
 def test_query(gads_service, client, customer_id):
     """Placeholder function for exploratory GAQL queries."""
 
-    return
-"""
+    return None
