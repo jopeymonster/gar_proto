@@ -25,3 +25,4 @@ repos:
         types: [python]
         args: [tests]
         stages: [pre-push]
+        always_run: true
