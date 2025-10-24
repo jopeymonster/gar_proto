@@ -8,10 +8,10 @@ def build_query(
     end_date: str,
     where_clauses: list[str] | None = None,
     order_by: list[str] | None = None,
-    ) -> str:
+) -> str:
     """
     GAQL query builder — segment-driven (no GROUP BY).
-    
+
     In GAQL, aggregation is determined by which attributes and segments
     are present in SELECT.
     """
@@ -28,8 +28,9 @@ def build_query(
         query += "ORDER BY " + ", ".join(order_by) + "\n"
     return query.strip()
 
+
 # customer/account info
-def customer_client_query(): 
+def customer_client_query():
     return """
     SELECT
         customer_client.client_customer,
@@ -44,6 +45,7 @@ def customer_client_query():
     ORDER BY customer_client.descriptive_name ASC
     """
 
+
 # audting
 def label_query():
     return """
@@ -55,6 +57,7 @@ def label_query():
     ORDER BY label.name ASC
     """
 
+
 def camp_group_query():
     return """
     SELECT
@@ -64,6 +67,7 @@ def camp_group_query():
     WHERE campaign_group.status = 'ENABLED'
     ORDER BY campaign_group.name ASC 
     """
+
 
 def label_audit_query():
     return """
@@ -84,6 +88,7 @@ def label_audit_query():
     ORDER BY customer.descriptive_name ASC, campaign.name ASC, ad_group.name ASC
     """
 
+
 # arc
 def arc_report_query(start_date, end_date, time_seg_string, **kwargs):
     select_fields = [
@@ -92,17 +97,18 @@ def arc_report_query(start_date, end_date, time_seg_string, **kwargs):
         "customer.id",
         "campaign.name",
         "campaign.advertising_channel_type",
-        "metrics.cost_micros"
+        "metrics.cost_micros",
     ]
     where_clauses = []
     return build_query(
-        resource = "campaign",
+        resource="campaign",
         select_fields=select_fields,
         start_date=start_date,
         end_date=end_date,
         where_clauses=where_clauses,
         order_by=[f"{time_seg_string} ASC"],
     )
+
 
 def account_report_query(start_date, end_date, time_seg_string, **kwargs):
     select_fields = [
@@ -118,23 +124,19 @@ def account_report_query(start_date, end_date, time_seg_string, **kwargs):
         "metrics.cost_micros",
         "metrics.absolute_top_impression_percentage",
         "metrics.top_impression_percentage",
-        "metrics.average_cpm"
+        "metrics.average_cpm",
     ]
-    where_clauses = [
-        "customer.status = 'ENABLED'"
-    ]
-    order_by = [
-        f"{time_seg_string} ASC",
-        "customer.descriptive_name DESC"
-    ]
+    where_clauses = ["customer.status = 'ENABLED'"]
+    order_by = [f"{time_seg_string} ASC", "customer.descriptive_name DESC"]
     return build_query(
-        resource = "customer",
+        resource="customer",
         select_fields=select_fields,
         start_date=start_date,
         end_date=end_date,
         where_clauses=where_clauses,
         order_by=order_by,
     )
+
 
 # ad_level, does not include PMax (pmax technically doesn't have 'ad groups')
 def ad_group_ad_query(start_date, end_date, time_seg_string, **kwargs):
@@ -160,22 +162,23 @@ def ad_group_ad_query(start_date, end_date, time_seg_string, **kwargs):
         "metrics.average_cpc",
         "metrics.interactions",
         "metrics.conversions",
-        "metrics.conversions_value"
+        "metrics.conversions_value",
     ]
     where_clauses = ["customer.status = 'ENABLED'"]
     order_by = [
         f"{time_seg_string} ASC",
         "customer.descriptive_name ASC",
-        "campaign.name ASC"
-        ]
+        "campaign.name ASC",
+    ]
     return build_query(
-        resource = "ad_group_ad",
+        resource="ad_group_ad",
         select_fields=select_fields,
         start_date=start_date,
         end_date=end_date,
         where_clauses=where_clauses,
         order_by=order_by,
     )
+
 
 # pmax query for ads_report
 def pmax_campaign_query(start_date, end_date, time_seg_string, **kwargs):
@@ -197,25 +200,26 @@ def pmax_campaign_query(start_date, end_date, time_seg_string, **kwargs):
         "metrics.average_cpc",
         "metrics.interactions",
         "metrics.conversions",
-        "metrics.conversions_value"
+        "metrics.conversions_value",
     ]
     where_clauses = [
         "campaign.advertising_channel_type = 'PERFORMANCE_MAX'",
-        "customer.status = 'ENABLED'"
+        "customer.status = 'ENABLED'",
     ]
     order_by = [
         f"{time_seg_string} ASC",
         "customer.descriptive_name ASC",
-        "campaign.name ASC"
-        ]
+        "campaign.name ASC",
+    ]
     return build_query(
-        resource = "campaign",
+        resource="campaign",
         select_fields=select_fields,
         start_date=start_date,
         end_date=end_date,
         where_clauses=where_clauses,
         order_by=order_by,
     )
+
 
 # click_view
 def click_view_query(start_date, end_date, time_seg_string, **kwargs):
@@ -225,8 +229,7 @@ def click_view_query(start_date, end_date, time_seg_string, **kwargs):
         "customer.id",
         "campaign.name",
         "campaign.id",
-        "campaign.advertising_channel_type," 
-        "ad_group.name",
+        "campaign.advertising_channel_type,ad_group.name",
         "ad_group.id",
         "click_view.ad_group_ad",
         "click_view.gclid",
@@ -246,17 +249,17 @@ def click_view_query(start_date, end_date, time_seg_string, **kwargs):
         "click_view.location_of_presence.most_specific",
         "segments.device",
         "segments.click_type",
-        "metrics.clicks"
-        ]
+        "metrics.clicks",
+    ]
     where_clauses = ["metrics.clicks > 0"]
     order_by = [
         f"{time_seg_string} ASC",
         "customer.descriptive_name ASC",
         "campaign.name ASC",
-        "ad_group.name ASC"
+        "ad_group.name ASC",
     ]
     return build_query(
-        resource = "click_view",
+        resource="click_view",
         select_fields=select_fields,
         start_date=start_date,
         end_date=end_date,
@@ -264,8 +267,11 @@ def click_view_query(start_date, end_date, time_seg_string, **kwargs):
         order_by=order_by,
     )
 
+
 # paid_organic_search_term_view
-def paid_organic_search_term_view_query(start_date, end_date, time_seg_string, **kwargs):
+def paid_organic_search_term_view_query(
+    start_date, end_date, time_seg_string, **kwargs
+):
     select_fields = [
         time_seg_string,
         "segments.search_engine_results_page_type",
@@ -290,17 +296,17 @@ def paid_organic_search_term_view_query(start_date, end_date, time_seg_string, *
         "metrics.combined_clicks",
         "metrics.clicks",
         "metrics.average_cpc",
-        "metrics.ctr"
+        "metrics.ctr",
     ]
     where_clauses = []
     order_by = [
         f"{time_seg_string} ASC",
         "customer.descriptive_name DESC",
         "campaign.name ASC",
-        "metrics.clicks DESC"
+        "metrics.clicks DESC",
     ]
     return build_query(
-        resource = "paid_organic_search_term_view",
+        resource="paid_organic_search_term_view",
         select_fields=select_fields,
         start_date=start_date,
         end_date=end_date,

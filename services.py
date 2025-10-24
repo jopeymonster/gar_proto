@@ -6,16 +6,21 @@ from collections import defaultdict
 from decimal import Decimal, ROUND_HALF_UP
 from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
-from google.api_core.exceptions import TooManyRequests, ResourceExhausted, Unauthenticated
+from google.api_core.exceptions import (
+    TooManyRequests,
+    ResourceExhausted,
+    Unauthenticated,
+)
 import helpers
 import queries
+
 
 def generate_services(yaml_loc=None):
     """
     Authenticates the Google Ads client using the provided YAML file and generates the service for use in API calls.
-    
+
     Requires a valid YAML configuration file for Google Ads API authentication.
-    
+
     The YAML file should contain the the developer token (required) and one of the following combinations of credentials:
      - OAuth2 credentials: client ID, client secret, refresh token
      - Service account credentials: service-account.json file obtain through Google Cloud Project
@@ -26,18 +31,22 @@ def generate_services(yaml_loc=None):
 
     Args:
         yaml_loc (str): Optional path to the YAML config file. If None, use default.
-    
+
     Returns:
         gads_service (GoogleAdsService): The Google Ads service object, used for making API calls.
         client (GoogleAdsClient): The Google Ads client object used for authentication and configuration.
     """
     # establish vars
     if yaml_loc is None:
-        yaml_loc = os.path.join(os.path.dirname(os.path.realpath(__file__)), "google-ads.yaml")
+        yaml_loc = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), "google-ads.yaml"
+        )
     # check if yaml file exists
     if not os.path.exists(yaml_loc):
-        print("The authorization process is incomplete...\n"
-              f"ERROR: {yaml_loc} not found. Please check the file path.")
+        print(
+            "The authorization process is incomplete...\n"
+            f"ERROR: {yaml_loc} not found. Please check the file path."
+        )
         sys.exit(1)
     else:
         print(f"Using YAML file: {yaml_loc}\n")
@@ -58,11 +67,12 @@ def generate_services(yaml_loc=None):
     customer_service = client.get_service("CustomerService")
     return gads_service, customer_service, client
 
+
 def get_accounts(gads_service, customer_service, client):
     """
     Fetches subaccounts (non-manager) under the authenticated MCC.
 
-    Args: 
+    Args:
         Google Ads Authorized Client objects:
             - gads_service (GoogleAdsService): The Google Ads service object, used for making API calls.
             - customer_service (CustomerService): Google accounts service object, used for authorization and customer lookup.
@@ -73,7 +83,9 @@ def get_accounts(gads_service, customer_service, client):
     """
     customer_client_query = queries.customer_client_query()
     mcc_id = str(client.login_customer_id)
-    mcc_response = gads_service.search_stream(customer_id=mcc_id, query=customer_client_query)
+    mcc_response = gads_service.search_stream(
+        customer_id=mcc_id, query=customer_client_query
+    )
     accounts_list = []
     accounts_dict = {}
     for mcc_data in mcc_response:
@@ -88,15 +100,17 @@ def get_accounts(gads_service, customer_service, client):
     protected_accounts_dict = {str(k): str(v) for k, v in accounts_dict.items()}
     return accounts_list, headers, protected_accounts_dict, len(protected_accounts_dict)
 
+
 """
 DECODERS/GETTERS
 """
+
 
 def get_enums(client):
     """
     Fetches the enums for AdvertisingChannelType and AdGroupType from the Google Ads API client.
 
-    Args: 
+    Args:
         client (GoogleAdsClient): The Google Ads client object used for authentication and configuration.
 
     Returns:
@@ -116,72 +130,86 @@ def get_enums(client):
     click_type_enum = client.enums.ClickTypeEnum
     keyword_match_type_enum = client.enums.KeywordMatchTypeEnum
     device_type_enum = client.enums.DeviceEnum
-    return channel_type_enum, ad_group_type_enum, ad_type_enum, serp_type_enum, click_type_enum, keyword_match_type_enum, device_type_enum
+    return (
+        channel_type_enum,
+        ad_group_type_enum,
+        ad_type_enum,
+        serp_type_enum,
+        click_type_enum,
+        keyword_match_type_enum,
+        device_type_enum,
+    )
+
 
 def get_labels(gads_service, client, customer_id):
     label_query = queries.label_query()
-    label_response = gads_service.search_stream(customer_id=customer_id, query=label_query)
+    label_response = gads_service.search_stream(
+        customer_id=customer_id, query=label_query
+    )
     label_dict = {}
     label_table = []
     for label_data in label_response:
         for row in label_data.results:
-            label_id = str(row.label.id) # store label_id as a string
+            label_id = str(row.label.id)  # store label_id as a string
             label_name = row.label.name
             label_dict[label_id] = label_name
-            label_table.append([
-                label_name,
-                label_id
-            ])
-    label_table_headers = [
-        "Label Name",
-        "Label ID"
-    ]
+            label_table.append([label_name, label_id])
+    label_table_headers = ["Label Name", "Label ID"]
     return label_table, label_table_headers, label_dict
+
 
 def get_campaign_groups(gads_service, client, customer_id):
     camp_group_query = queries.camp_group_query()
-    camp_group_response = gads_service.search_stream(customer_id=customer_id, query=camp_group_query)
+    camp_group_response = gads_service.search_stream(
+        customer_id=customer_id, query=camp_group_query
+    )
     camp_group_dict = {}
     camp_group_table = []
     for camp_group_data in camp_group_response:
         for row in camp_group_data.results:
-            camp_group_id = str(row.campaign_group.id) # store campaign_group_id as a string
+            camp_group_id = str(
+                row.campaign_group.id
+            )  # store campaign_group_id as a string
             camp_group_name = row.campaign_group.name
             camp_group_dict[camp_group_id] = camp_group_name
-            camp_group_table.append([
-                camp_group_name,
-                camp_group_id
-            ])
-    camp_group_headers = [
-        "Campaign Group Name",
-        "Campaign Group ID"
-    ]
+            camp_group_table.append([camp_group_name, camp_group_id])
+    camp_group_headers = ["Campaign Group Name", "Campaign Group ID"]
     return camp_group_table, camp_group_headers, camp_group_dict
+
 
 # exceptions wrapper
 def handle_exceptions(func):
     def print_error(func_name, error):
         print(f"\nError in function '{func_name}': {repr(error)} - Exiting...\n")
+
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
         # GAds specific errors
         except Unauthenticated as e:
-            print("Unable to authenticate or invalid credentials.  Please check your YAML or SECRETS file.")
+            print(
+                "Unable to authenticate or invalid credentials.  Please check your YAML or SECRETS file."
+            )
             print_error(func.__name__, e)
         except GoogleAdsException as ex:
-            print("Google Ads API error encountered: \n"
-                  f"Request with ID '{ex.request_id}' failed with status '{ex.error.code().name}' and includes the following errors:\n")
+            print(
+                "Google Ads API error encountered: \n"
+                f"Request with ID '{ex.request_id}' failed with status '{ex.error.code().name}' and includes the following errors:\n"
+            )
             for error in ex.failure.errors:
                 print(f"\tError with message '{error.message}'.")
                 if error.location:
                     for field_path_element in error.location.field_path_elements:
                         print(f"\t\tOn field: {field_path_element.field_name}")
         except TooManyRequests as e:
-            print("Too many requests. API quota may have been reached or accessed too quickly. Please try again later.")
+            print(
+                "Too many requests. API quota may have been reached or accessed too quickly. Please try again later."
+            )
             print_error(func.__name__, e)
         except ResourceExhausted as e:
-            print("Resource exhausted. API quota may have been reached or accessed too quickly. Please try again later.")
+            print(
+                "Resource exhausted. API quota may have been reached or accessed too quickly. Please try again later."
+            )
             print_error(func.__name__, e)
         # generic requests exceptions
         except requests.exceptions.RequestException as e:
@@ -204,56 +232,76 @@ def handle_exceptions(func):
             print_error(func.__name__, e)
         except Exception as e:
             print_error(func.__name__, e)
+
     return wrapper
+
 
 """
 AUDITING REPORTS
 """
+
+
 def complete_labels_audit(gads_service, client, customer_id):
     # enum decoders
     undecoded_enums = get_enums(client)
     channel_type_enum, ad_group_type_enum, *extra = undecoded_enums
     # get label and campaign group metadata
-    label_table, label_table_headers, label_dict = get_labels(gads_service, client, customer_id)
-    camp_group_table, camp_group_headers, camp_group_dict = get_campaign_groups(gads_service, client, customer_id)
+    label_table, label_table_headers, label_dict = get_labels(
+        gads_service, client, customer_id
+    )
+    camp_group_table, camp_group_headers, camp_group_dict = get_campaign_groups(
+        gads_service, client, customer_id
+    )
     # GAQL query
     label_audit_query = queries.label_audit_query()
-    response = gads_service.search_stream(customer_id=customer_id, query=label_audit_query)
+    response = gads_service.search_stream(
+        customer_id=customer_id, query=label_audit_query
+    )
     audit_table = []
     audit_dict = {}
     for batch in response:
         for row in batch.results:
             # decode enum fields
-            channel_type = channel_type_enum.AdvertisingChannelType.Name(
-                row.campaign.advertising_channel_type
-            ) if hasattr(row.campaign, 'advertising_channel_type') else 'UNDEFINED'
-            ad_group_type = ad_group_type_enum.AdGroupType.Name(
-                row.ad_group.type_
-            ) if hasattr(row.ad_group, 'type_') else 'UNDEFINED'
+            channel_type = (
+                channel_type_enum.AdvertisingChannelType.Name(
+                    row.campaign.advertising_channel_type
+                )
+                if hasattr(row.campaign, "advertising_channel_type")
+                else "UNDEFINED"
+            )
+            ad_group_type = (
+                ad_group_type_enum.AdGroupType.Name(row.ad_group.type_)
+                if hasattr(row.ad_group, "type_")
+                else "UNDEFINED"
+            )
             # resolve labels
             campaign_labels = [
-                label_dict.get(label.split('/')[-1], 'UNDEFINED') for label in row.campaign.labels
+                label_dict.get(label.split("/")[-1], "UNDEFINED")
+                for label in row.campaign.labels
             ]
             ad_group_labels = [
-                label_dict.get(label.split('/')[-1], 'UNDEFINED') for label in row.ad_group.labels
+                label_dict.get(label.split("/")[-1], "UNDEFINED")
+                for label in row.ad_group.labels
             ]
             # campaign group name
-            campaign_group_id = row.campaign.campaign_group.split('/')[-1]
-            campaign_group_name = camp_group_dict.get(campaign_group_id, 'UNDEFINED')
+            campaign_group_id = row.campaign.campaign_group.split("/")[-1]
+            campaign_group_name = camp_group_dict.get(campaign_group_id, "UNDEFINED")
             # build flat row
-            audit_table.append([
-                row.customer.id,
-                row.customer.descriptive_name,
-                row.campaign.id,
-                row.campaign.name,
-                channel_type,
-                campaign_group_name,
-                ', '.join(campaign_labels),
-                row.ad_group.id,
-                row.ad_group.name,
-                ad_group_type,
-                ', '.join(ad_group_labels)
-            ])
+            audit_table.append(
+                [
+                    row.customer.id,
+                    row.customer.descriptive_name,
+                    row.campaign.id,
+                    row.campaign.name,
+                    channel_type,
+                    campaign_group_name,
+                    ", ".join(campaign_labels),
+                    row.ad_group.id,
+                    row.ad_group.name,
+                    ad_group_type,
+                    ", ".join(ad_group_labels),
+                ]
+            )
             # build structured dict
             audit_dict[(row.campaign.id, row.ad_group.id)] = {
                 "customer_id": row.customer.id,
@@ -279,14 +327,19 @@ def complete_labels_audit(gads_service, client, customer_id):
         "ad_group id",
         "ad_group name",
         "ad_group type",
-        "ad_group labels"
+        "ad_group labels",
     ]
     return audit_table, audit_headers, audit_dict
+
 
 """
 PERFORMANCE REPORTS
 """
-def arc_report_single(gads_service, client, start_date, end_date, time_seg, customer_id, **kwargs):
+
+
+def arc_report_single(
+    gads_service, client, start_date, end_date, time_seg, customer_id, **kwargs
+):
     """
     Replicates the Ad Response Codes report for the selected customerID/account,
     aggregating spend by Date, Account, ARC, and Channel Type, and optionally
@@ -313,8 +366,12 @@ def arc_report_single(gads_service, client, start_date, end_date, time_seg, cust
     include_channel_types = kwargs.get("include_channel_types", False)
     include_campaign_info = kwargs.get("include_campaign_info", False)
     # GAQL query
-    arc_report_query = queries.arc_report_query(start_date, end_date, time_seg_string, **kwargs)
-    arc_query_response = gads_service.search_stream(customer_id=customer_id, query=arc_report_query)
+    arc_report_query = queries.arc_report_query(
+        start_date, end_date, time_seg_string, **kwargs
+    )
+    arc_query_response = gads_service.search_stream(
+        customer_id=customer_id, query=arc_report_query
+    )
     # initialize empty list
     table_data = []
     # fetch data and populate list
@@ -322,11 +379,16 @@ def arc_report_single(gads_service, client, start_date, end_date, time_seg, cust
         for row in batch.results:
             arc = helpers.extract_arc(row.campaign.name)
             channel_type = (
-                channel_type_enum.AdvertisingChannelType.Name(row.campaign.advertising_channel_type)
-                if hasattr(row.campaign, "advertising_channel_type") else "UNDEFINED"
+                channel_type_enum.AdvertisingChannelType.Name(
+                    row.campaign.advertising_channel_type
+                )
+                if hasattr(row.campaign, "advertising_channel_type")
+                else "UNDEFINED"
             )
             date_value = getattr(row.segments, time_seg)
-            cost_value = helpers.micros_to_decimal(row.metrics.cost_micros, Decimal("0.01"))
+            cost_value = helpers.micros_to_decimal(
+                row.metrics.cost_micros, Decimal("0.01")
+            )
             # build dict, primary dims/metrics first
             arc_dict = {
                 "Date": date_value,
@@ -341,16 +403,16 @@ def arc_report_single(gads_service, client, start_date, end_date, time_seg, cust
             # append channel types if selected
             if include_channel_types:
                 arc_dict["Campaign type"] = channel_type
-    
+
             # append dict
             table_data.append(arc_dict)
     # define headers
-    headers = ["Date", "Account name", "Customer ID"] # primary dimensions
+    headers = ["Date", "Account name", "Customer ID"]  # primary dimensions
     if include_campaign_info:
         headers.append("Campaign")
     if include_channel_types:
         headers.append("Campaign type")
-    headers += ["ARC", "Cost"] # primary metrics
+    headers += ["ARC", "Cost"]  # primary metrics
     # aggregate if campaign info is not included
     if not include_campaign_info:
         # determine grouping keys
@@ -359,7 +421,9 @@ def arc_report_single(gads_service, client, start_date, end_date, time_seg, cust
         else:
             group_keys = ["Date", "Account name", "Customer ID", "ARC"]
         # Aggregate by key
-        aggregated = defaultdict(lambda: Decimal("0.00")) # <--- EVALUATE: this may be affecting cost calc
+        aggregated = defaultdict(
+            lambda: Decimal("0.00")
+        )  # <--- EVALUATE: this may be affecting cost calc
         for row in table_data:
             key = tuple(row[k] for k in group_keys)
             aggregated[key] += row["Cost"]
@@ -369,13 +433,14 @@ def arc_report_single(gads_service, client, start_date, end_date, time_seg, cust
         ]
         headers = group_keys + ["Cost"]
     # sort by date ascending, cost descending
-    table_data_sorted = sorted(
-        table_data, 
-        key=lambda r: (r["Date"], -float(r["Cost"])))
+    table_data_sorted = sorted(table_data, key=lambda r: (r["Date"], -float(r["Cost"])))
     filtered_data = [[row.get(h) for h in headers] for row in table_data_sorted]
     return filtered_data, headers
 
-def arc_report_all(gads_service, client, start_date, end_date, time_seg, accounts_info, **kwargs):
+
+def arc_report_all(
+    gads_service, client, start_date, end_date, time_seg, accounts_info, **kwargs
+):
     """
     Generates the Ad Response Codes report for all accounts listed in account_info.
 
@@ -397,7 +462,13 @@ def arc_report_all(gads_service, client, start_date, end_date, time_seg, account
         print(f"Processing {account_descriptive}...")
         try:
             table_data, headers = arc_report_single(
-                gads_service, client, start_date, end_date, time_seg, customer_id, **kwargs
+                gads_service,
+                client,
+                start_date,
+                end_date,
+                time_seg,
+                customer_id,
+                **kwargs,
             )
             all_data.extend(table_data)
         except Exception as e:
@@ -410,14 +481,16 @@ def arc_report_all(gads_service, client, start_date, end_date, time_seg, account
     cost_idx = headers.index("Cost") if "Cost" in headers else -1
     if cost_idx >= 0:
         all_data_sorted = sorted(
-            all_data,
-            key=lambda r: (r[0], r[acct_idx], -float(r[cost_idx]))
+            all_data, key=lambda r: (r[0], r[acct_idx], -float(r[cost_idx]))
         )
     else:
         all_data_sorted = sorted(all_data, key=lambda r: (r[0], r[acct_idx]))
     return all_data_sorted, headers
 
-def account_report_single(gads_service, client, start_date, end_date, time_seg, customer_id, **kwargs):
+
+def account_report_single(
+    gads_service, client, start_date, end_date, time_seg, customer_id, **kwargs
+):
     """
     Generates a top level performance report for the selected customerID/account.
 
@@ -434,13 +507,17 @@ def account_report_single(gads_service, client, start_date, end_date, time_seg, 
         tuple: (table_data_sorted, headers) for display or export.
     """
     # enum decoders
-    time_seg_string = f'segments.{time_seg}'
+    time_seg_string = f"segments.{time_seg}"
     # initialize an empty list to store the data
     table_data = []
     # GAQL query
-    account_report_query = queries.account_report_query(start_date, end_date, time_seg_string)
+    account_report_query = queries.account_report_query(
+        start_date, end_date, time_seg_string
+    )
     # fetch data and populate the table_data list
-    account_report_response = gads_service.search_stream(customer_id=customer_id, query=account_report_query)
+    account_report_response = gads_service.search_stream(
+        customer_id=customer_id, query=account_report_query
+    )
     for data in account_report_response:
         for row in data.results:
             date_value = getattr(row.segments, time_seg)
@@ -448,29 +525,38 @@ def account_report_single(gads_service, client, start_date, end_date, time_seg, 
             clicks = getattr(row.metrics, "clicks", 0) or 0
             invalid_clicks = getattr(row.metrics, "invalid_clicks", 0) or 0
             invalid_click_pct = (
-                (Decimal(invalid_clicks) / Decimal(clicks)).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
-                if clicks else Decimal("0.0000")
+                (Decimal(invalid_clicks) / Decimal(clicks)).quantize(
+                    Decimal("0.0001"), rounding=ROUND_HALF_UP
+                )
+                if clicks
+                else Decimal("0.0000")
             )
             account_report_dict = {
                 "date": date_value,
                 "account": row.customer.descriptive_name,
                 "customer id": row.customer.id,
-                "cost": helpers.micros_to_decimal(row.metrics.cost_micros, Decimal("0.01")),
+                "cost": helpers.micros_to_decimal(
+                    row.metrics.cost_micros, Decimal("0.01")
+                ),
                 "clicks": clicks,
                 "invalid clicks": invalid_clicks,
                 "invalid click %": invalid_click_pct,
                 "interactions": row.metrics.interactions,
                 "impressions": row.metrics.impressions,
                 "ctr": row.metrics.ctr,
-                "avg cpc": helpers.micros_to_decimal(row.metrics.average_cpc, Decimal("0.001")),
-                "avg cpm": helpers.micros_to_decimal(row.metrics.average_cpm, Decimal("0.001")),
+                "avg cpc": helpers.micros_to_decimal(
+                    row.metrics.average_cpc, Decimal("0.001")
+                ),
+                "avg cpm": helpers.micros_to_decimal(
+                    row.metrics.average_cpm, Decimal("0.001")
+                ),
                 "abs top is": row.metrics.absolute_top_impression_percentage,
                 "top is %": row.metrics.top_impression_percentage,
-                }
+            }
             # append data
             table_data.append(account_report_dict)
     # define the headers for the table
-    headers = ["date","account","customer id"] # primary dimensions
+    headers = ["date", "account", "customer id"]  # primary dimensions
     # seperate metric headers, in case needing to expand later
     headers += [
         "cost",
@@ -484,16 +570,18 @@ def account_report_single(gads_service, client, start_date, end_date, time_seg, 
         "avg cpm",
         "abs top is",
         "top is %",
-        ]
+    ]
     filtered_data = [[row[h] for h in headers] for row in table_data]
     # sort by: time index (0), descending cost
     table_data_sorted = sorted(
-        filtered_data,
-        key=lambda r:(r[0], -float(r[headers.index("cost")]))
+        filtered_data, key=lambda r: (r[0], -float(r[headers.index("cost")]))
     )
     return table_data_sorted, headers
 
-def account_report_all(gads_service, client, start_date, end_date, time_seg, accounts_info, **kwargs):
+
+def account_report_all(
+    gads_service, client, start_date, end_date, time_seg, accounts_info, **kwargs
+):
     """
     Generates a top level performance report for all accounts listed in account_info.
 
@@ -528,15 +616,17 @@ def account_report_all(gads_service, client, start_date, end_date, time_seg, acc
     acct_idx = headers.index("account") if "account" in headers else None
     if cost_idx is not None and acct_idx is not None:
         all_data_sorted = sorted(
-            all_data,
-            key=lambda r: (r[0], r[acct_idx], -float(r[cost_idx]))
+            all_data, key=lambda r: (r[0], r[acct_idx], -float(r[cost_idx]))
         )
     else:
         # fallback to date sort if error
         all_data_sorted = sorted(all_data, key=lambda r: r[0])
     return all_data_sorted, headers
 
-def ad_level_report_single(gads_service, client, start_date, end_date, time_seg, customer_id, **kwargs):
+
+def ad_level_report_single(
+    gads_service, client, start_date, end_date, time_seg, customer_id, **kwargs
+):
     """
     Replicates the Google Ads Report Studio by pulling ad performance data
     with ad group and ad types using ad_group_ad as the main resource,
@@ -561,7 +651,7 @@ def ad_level_report_single(gads_service, client, start_date, end_date, time_seg,
     undecoded_enums = get_enums(client)
     channel_type_enum, ad_group_type_enum, ad_type_enum, *extra = undecoded_enums
     # time_seg transform
-    time_seg_string = f'segments.{time_seg}'
+    time_seg_string = f"segments.{time_seg}"
     # toggles unpack
     include_channel_types = kwargs.get("include_channel_types", False)
     include_campaign_info = kwargs.get("include_campaign_info", False)
@@ -569,40 +659,53 @@ def ad_level_report_single(gads_service, client, start_date, end_date, time_seg,
     table_data = []
     # ad_group_ad scoped query, will not capture PMAX campaigns due to lack of ad or ad_group scope dimension in Pmax
     ad_group_ad_query = queries.ad_group_ad_query(start_date, end_date, time_seg_string)
-    ad_group_ad_response = gads_service.search_stream(customer_id=customer_id, query=ad_group_ad_query)
+    ad_group_ad_response = gads_service.search_stream(
+        customer_id=customer_id, query=ad_group_ad_query
+    )
     for batch in ad_group_ad_response:
         for row in batch.results:
             arc = helpers.extract_arc(row.campaign.name)
             channel_type = (
-                channel_type_enum.AdvertisingChannelType.Name(row.campaign.advertising_channel_type)
-                if hasattr(row.campaign, 'advertising_channel_type') else 'UNDEFINED'
+                channel_type_enum.AdvertisingChannelType.Name(
+                    row.campaign.advertising_channel_type
+                )
+                if hasattr(row.campaign, "advertising_channel_type")
+                else "UNDEFINED"
             )
             ad_group_type = (
                 ad_group_type_enum.AdGroupType.Name(row.ad_group.type_)
-                if hasattr(row.ad_group, 'type_') else 'UNDEFINED'
+                if hasattr(row.ad_group, "type_")
+                else "UNDEFINED"
             )
             ad_type = (
                 ad_type_enum.AdType.Name(row.ad_group_ad.ad.type_)
-                if hasattr(row.ad_group_ad.ad, 'type_') else 'UNDEFINED'
+                if hasattr(row.ad_group_ad.ad, "type_")
+                else "UNDEFINED"
             )
             date_value = getattr(row.segments, time_seg)
             # build dict struct
-            cost_value = helpers.micros_to_decimal(row.metrics.cost_micros, Decimal("0.01"))
+            cost_value = helpers.micros_to_decimal(
+                row.metrics.cost_micros, Decimal("0.01")
+            )
             impressions = getattr(row.metrics, "impressions", 0) or 0
             avg_cpm_value = (
                 helpers.micros_to_decimal(row.metrics.average_cpm, Decimal("0.001"))
-                if impressions else Decimal("0.000")
+                if impressions
+                else Decimal("0.000")
             )
             clicks = getattr(row.metrics, "clicks", 0) or 0
             avg_cpc_value = (
                 helpers.micros_to_decimal(row.metrics.average_cpc, Decimal("0.001"))
-                if clicks else Decimal("0.000")
+                if clicks
+                else Decimal("0.000")
             )
             video_views = getattr(row.metrics, "video_views", 0) or 0
-            conversions_metric = Decimal(str(getattr(row.metrics, "conversions", 0) or 0))
-            conv_value_metric = Decimal(str(getattr(row.metrics, "conversions_value", 0) or 0)).quantize(
-                Decimal("0.01"), rounding=ROUND_HALF_UP
+            conversions_metric = Decimal(
+                str(getattr(row.metrics, "conversions", 0) or 0)
             )
+            conv_value_metric = Decimal(
+                str(getattr(row.metrics, "conversions_value", 0) or 0)
+            ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
             ad_group_ad_dict = {
                 "Date": date_value,
                 "Customer ID": row.customer.id,
@@ -627,36 +730,49 @@ def ad_level_report_single(gads_service, client, start_date, end_date, time_seg,
                 "Video Views": video_views,
                 "Conversions": conversions_metric,
                 "Conv. value": conv_value_metric,
-                }
+            }
             table_data.append(ad_group_ad_dict)
     # campaign scoped query for pmax campaigns
-    pmax_campaign_query = queries.pmax_campaign_query(start_date, end_date, time_seg_string)
-    pmax_campaign_response = gads_service.search_stream(customer_id=customer_id, query=pmax_campaign_query)
+    pmax_campaign_query = queries.pmax_campaign_query(
+        start_date, end_date, time_seg_string
+    )
+    pmax_campaign_response = gads_service.search_stream(
+        customer_id=customer_id, query=pmax_campaign_query
+    )
     for batch in pmax_campaign_response:
         for row in batch.results:
             # ENUM decoding with fallbacks
             arc = helpers.extract_arc(row.campaign.name)
             channel_type = (
-                channel_type_enum.AdvertisingChannelType.Name(row.campaign.advertising_channel_type)
-                if hasattr(row.campaign, 'advertising_channel_type') else 'UNDEFINED'
+                channel_type_enum.AdvertisingChannelType.Name(
+                    row.campaign.advertising_channel_type
+                )
+                if hasattr(row.campaign, "advertising_channel_type")
+                else "UNDEFINED"
             )
             date_value = getattr(row.segments, time_seg)
-            cost_value = helpers.micros_to_decimal(row.metrics.cost_micros, Decimal("0.01"))
+            cost_value = helpers.micros_to_decimal(
+                row.metrics.cost_micros, Decimal("0.01")
+            )
             impressions = getattr(row.metrics, "impressions", 0) or 0
             avg_cpm_value = (
                 helpers.micros_to_decimal(row.metrics.average_cpm, Decimal("0.001"))
-                if impressions else Decimal("0.000")
+                if impressions
+                else Decimal("0.000")
             )
             clicks = getattr(row.metrics, "clicks", 0) or 0
             avg_cpc_value = (
                 helpers.micros_to_decimal(row.metrics.average_cpc, Decimal("0.001"))
-                if clicks else Decimal("0.000")
+                if clicks
+                else Decimal("0.000")
             )
             video_views = getattr(row.metrics, "video_views", 0) or 0
-            conversions_metric = Decimal(str(getattr(row.metrics, "conversions", 0) or 0))
-            conv_value_metric = Decimal(str(getattr(row.metrics, "conversions_value", 0) or 0)).quantize(
-                Decimal("0.01"), rounding=ROUND_HALF_UP
+            conversions_metric = Decimal(
+                str(getattr(row.metrics, "conversions", 0) or 0)
             )
+            conv_value_metric = Decimal(
+                str(getattr(row.metrics, "conversions_value", 0) or 0)
+            ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
             pmax_dict = {
                 "Date": date_value,
                 "Customer ID": row.customer.id,
@@ -665,7 +781,7 @@ def ad_level_report_single(gads_service, client, start_date, end_date, time_seg,
                 "Campaign ID": row.campaign.id,
                 "Campaign name": row.campaign.name,
                 "Campaign type": channel_type,
-                "Ad group ID": row.campaign.id,   # PMAX placeholder
+                "Ad group ID": row.campaign.id,  # PMAX placeholder
                 "Ad group name": row.campaign.name,  # PMAX placeholder
                 "Ad group type": "PERFORMANCE_MAX",
                 "Ad ID": row.campaign.id,  # PMAX placeholder
@@ -683,14 +799,14 @@ def ad_level_report_single(gads_service, client, start_date, end_date, time_seg,
                 "Conv. value": conv_value_metric,
             }
             table_data.append(pmax_dict)
-    headers = [ "Date", "Customer ID", "Account name", "ARC"] # primary dimensions
+    headers = ["Date", "Customer ID", "Account name", "ARC"]  # primary dimensions
     if include_campaign_info:
-        headers += ["Campaign ID","Campaign name"]
+        headers += ["Campaign ID", "Campaign name"]
     if include_channel_types:
         headers.append("Campaign type")
     if include_adgroup_info:
-        headers += ["Ad group ID","Ad group name","Ad group type","Ad ID","Ad type"]
-    headers += [ # metric headers
+        headers += ["Ad group ID", "Ad group name", "Ad group type", "Ad ID", "Ad type"]
+    headers += [  # metric headers
         "Cost",
         "Impr.",
         "Abs Top Imp%",
@@ -722,17 +838,19 @@ def ad_level_report_single(gads_service, client, start_date, end_date, time_seg,
         key = tuple(row.get(field) for field in dimension_fields)
         if key not in aggregated:
             aggregated[key] = {field: row.get(field) for field in dimension_fields}
-            aggregated[key].update({
-                "Cost": Decimal("0.00"),
-                "Impr.": 0,
-                "Interactions": 0,
-                "Clicks": 0,
-                "Video Views": 0,
-                "Conversions": Decimal("0"),
-                "Conv. value": Decimal("0.00"),
-                "_abs_top_weight": Decimal("0"),
-                "_top_weight": Decimal("0"),
-            })
+            aggregated[key].update(
+                {
+                    "Cost": Decimal("0.00"),
+                    "Impr.": 0,
+                    "Interactions": 0,
+                    "Clicks": 0,
+                    "Video Views": 0,
+                    "Conversions": Decimal("0"),
+                    "Conv. value": Decimal("0.00"),
+                    "_abs_top_weight": Decimal("0"),
+                    "_top_weight": Decimal("0"),
+                }
+            )
         entry = aggregated[key]
         cost_value = row.get("Cost", Decimal("0.00"))
         if not isinstance(cost_value, Decimal):
@@ -765,34 +883,53 @@ def ad_level_report_single(gads_service, client, start_date, end_date, time_seg,
         top_weight = entry.pop("_top_weight", Decimal("0"))
         entry["Cost"] = cost_value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         conversions_value = entry.get("Conversions", Decimal("0"))
-        entry["Conversions"] = conversions_value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        entry["Conversions"] = conversions_value.quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
         conv_value_total = entry.get("Conv. value", Decimal("0.00"))
-        entry["Conv. value"] = conv_value_total.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        entry["Conv. value"] = conv_value_total.quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
         entry["Avg CPC"] = (
-            (entry["Cost"] / Decimal(clicks)).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP)
-            if clicks else Decimal("0.000")
+            (entry["Cost"] / Decimal(clicks)).quantize(
+                Decimal("0.001"), rounding=ROUND_HALF_UP
+            )
+            if clicks
+            else Decimal("0.000")
         )
         entry["Avg CPM"] = (
-            ((entry["Cost"] / Decimal(impressions)) * Decimal("1000")).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP)
-            if impressions else Decimal("0.000")
+            ((entry["Cost"] / Decimal(impressions)) * Decimal("1000")).quantize(
+                Decimal("0.001"), rounding=ROUND_HALF_UP
+            )
+            if impressions
+            else Decimal("0.000")
         )
         entry["Abs Top Imp%"] = (
-            (abs_top_weight / Decimal(impressions)).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
-            if impressions else Decimal("0")
+            (abs_top_weight / Decimal(impressions)).quantize(
+                Decimal("0.0001"), rounding=ROUND_HALF_UP
+            )
+            if impressions
+            else Decimal("0")
         )
         entry["Top Imp%"] = (
-            (top_weight / Decimal(impressions)).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
-            if impressions else Decimal("0")
+            (top_weight / Decimal(impressions)).quantize(
+                Decimal("0.0001"), rounding=ROUND_HALF_UP
+            )
+            if impressions
+            else Decimal("0")
         )
         aggregated_rows.append(entry)
     aggregated_rows_sorted = sorted(
         aggregated_rows,
-        key=lambda r:(r.get("Date"), -float(r.get("Cost", Decimal("0"))))
+        key=lambda r: (r.get("Date"), -float(r.get("Cost", Decimal("0")))),
     )
     filtered_data = [[row.get(h) for h in headers] for row in aggregated_rows_sorted]
     return filtered_data, headers
 
-def ad_level_report_all(gads_service, client, start_date, end_date, time_seg, accounts_info, **kwargs):
+
+def ad_level_report_all(
+    gads_service, client, start_date, end_date, time_seg, accounts_info, **kwargs
+):
     """
     Generates ad scoped report for all accounts listed in account_info.
 
@@ -814,7 +951,13 @@ def ad_level_report_all(gads_service, client, start_date, end_date, time_seg, ac
         print(f"Processing {account_descriptive}...")
         try:
             table_data, headers = ad_level_report_single(
-                gads_service, client, start_date, end_date, time_seg, customer_id, **kwargs
+                gads_service,
+                client,
+                start_date,
+                end_date,
+                time_seg,
+                customer_id,
+                **kwargs,
             )
             all_data.extend(table_data)
         except Exception as e:
@@ -827,15 +970,17 @@ def ad_level_report_all(gads_service, client, start_date, end_date, time_seg, ac
     acct_idx = headers.index("Account name") if "Account name" in headers else None
     if cost_idx is not None and acct_idx is not None:
         all_data_sorted = sorted(
-            all_data,
-            key=lambda r: (r[0], r[acct_idx], -float(r[cost_idx]))
+            all_data, key=lambda r: (r[0], r[acct_idx], -float(r[cost_idx]))
         )
     else:
         # fallback to date sort if error
         all_data_sorted = sorted(all_data, key=lambda r: r[0])
     return all_data_sorted, headers
 
-def click_view_report_single(gads_service, client, start_date, end_date, time_seg, customer_id, **kwargs):
+
+def click_view_report_single(
+    gads_service, client, start_date, end_date, time_seg, customer_id, **kwargs
+):
     """
     Generates a click view performance report for the selected customerID/account.
 
@@ -852,9 +997,15 @@ def click_view_report_single(gads_service, client, start_date, end_date, time_se
         tuple: (table_data_sorted, headers) for display or export.
     """
     # enum decoders
-    time_seg_string = f'segments.{time_seg}'
+    time_seg_string = f"segments.{time_seg}"
     undecoded_enums = get_enums(client)
-    channel_type_enum, *extra, click_type_enum, keyword_match_type_enum, device_type_enum = undecoded_enums
+    (
+        channel_type_enum,
+        *extra,
+        click_type_enum,
+        keyword_match_type_enum,
+        device_type_enum,
+    ) = undecoded_enums
     # unpack toggles
     include_channel_types = kwargs.get("include_channel_types", False)
     include_campaign_info = kwargs.get("include_campaign_info", False)
@@ -862,8 +1013,10 @@ def click_view_report_single(gads_service, client, start_date, end_date, time_se
     include_device_info = kwargs.get("include_device_info", False)
     # GAQL query
     click_view_query = queries.click_view_query(start_date, end_date, time_seg_string)
-    # fetch data 
-    response = gads_service.search_stream(customer_id=customer_id, query=click_view_query)
+    # fetch data
+    response = gads_service.search_stream(
+        customer_id=customer_id, query=click_view_query
+    )
     # initialize an empty list to store the data
     table_data = []
     # populate the table_data list
@@ -871,25 +1024,36 @@ def click_view_report_single(gads_service, client, start_date, end_date, time_se
         for row in data.results:
             date_value = getattr(row.segments, time_seg)
             channel_type = (
-                channel_type_enum.AdvertisingChannelType.Name(row.campaign.advertising_channel_type)
-                if hasattr(row.campaign, 'advertising_channel_type') else 'UNDEFINED'
+                channel_type_enum.AdvertisingChannelType.Name(
+                    row.campaign.advertising_channel_type
+                )
+                if hasattr(row.campaign, "advertising_channel_type")
+                else "UNDEFINED"
             )
             click_type = (
                 click_type_enum.ClickType.Name(row.segments.click_type)
-                if hasattr(row.segments, 'click_type') else 'UNDEFINED'
+                if hasattr(row.segments, "click_type")
+                else "UNDEFINED"
             )
             keyword_match_type = (
-                keyword_match_type_enum.KeywordMatchType.Name(row.click_view.keyword_info.match_type)
-                if getattr(row.click_view, "keyword_info", None) 
+                keyword_match_type_enum.KeywordMatchType.Name(
+                    row.click_view.keyword_info.match_type
+                )
+                if getattr(row.click_view, "keyword_info", None)
                 and hasattr(row.click_view.keyword_info, "match_type")
                 else "UNDEFINED"
             )
             device_type = (
                 device_type_enum.Device.Name(row.segments.device)
-                if hasattr(row.segments, 'device') else 'UNDEFINED'
+                if hasattr(row.segments, "device")
+                else "UNDEFINED"
             )
             # cleaning needed for text, returning values with '=' (also '+' but those are bid modifiers from old targets)
-            keyword_text = (row.click_view.keyword_info.text).strip() if getattr(row.click_view, "keyword_info", None) else None
+            keyword_text = (
+                (row.click_view.keyword_info.text).strip()
+                if getattr(row.click_view, "keyword_info", None)
+                else None
+            )
             # build row dict with response
             click_view_dict = {
                 "Date": date_value,
@@ -923,7 +1087,7 @@ def click_view_report_single(gads_service, client, start_date, end_date, time_se
             # append dict
             table_data.append(click_view_dict)
     # define the headers for the table
-    headers = ["Date", "Account name", "Customer ID"] # primary dimensions
+    headers = ["Date", "Account name", "Customer ID"]  # primary dimensions
     if include_campaign_info:
         headers += ["Campaign ID", "Campaign name"]
     if include_channel_types:
@@ -933,7 +1097,7 @@ def click_view_report_single(gads_service, client, start_date, end_date, time_se
     headers += ["gclid", "keyword match type", "keyword text", "SERP #"]
     if include_device_info:
         headers.append("device")
-    headers += ["click type", "clicks"] # metrics
+    headers += ["click type", "clicks"]  # metrics
     metric_fields = {"clicks"}
     dimension_fields = [h for h in headers if h not in metric_fields]
     aggregated = {}
@@ -944,13 +1108,15 @@ def click_view_report_single(gads_service, client, start_date, end_date, time_se
             aggregated[key]["clicks"] = 0
         aggregated[key]["clicks"] += row.get("clicks", 0) or 0
     aggregated_rows = sorted(
-        aggregated.values(),
-        key=lambda r: (r.get("Date"), -float(r.get("clicks", 0)))
+        aggregated.values(), key=lambda r: (r.get("Date"), -float(r.get("clicks", 0)))
     )
     filtered_data = [[row.get(h) for h in headers] for row in aggregated_rows]
     return filtered_data, headers
 
-def click_view_report_all(gads_service, client, start_date, end_date, time_seg, accounts_info, **kwargs):
+
+def click_view_report_all(
+    gads_service, client, start_date, end_date, time_seg, accounts_info, **kwargs
+):
     """
     Generates a click view performance report for all accounts listed in account_info.
 
@@ -972,7 +1138,13 @@ def click_view_report_all(gads_service, client, start_date, end_date, time_seg, 
         print(f"Processing {account_descriptive}...")
         try:
             table_data, headers = click_view_report_single(
-                gads_service, client, start_date, end_date, time_seg, customer_id, **kwargs
+                gads_service,
+                client,
+                start_date,
+                end_date,
+                time_seg,
+                customer_id,
+                **kwargs,
             )
             all_data.extend(table_data)
         except Exception as e:
@@ -985,14 +1157,16 @@ def click_view_report_all(gads_service, client, start_date, end_date, time_seg, 
     clicks_idx = headers.index("clicks") if "clicks" in headers else -1
     if clicks_idx >= 0:
         all_data_sorted = sorted(
-            all_data,
-            key=lambda r: (r[0], r[acct_idx], -float(r[clicks_idx]))
+            all_data, key=lambda r: (r[0], r[acct_idx], -float(r[clicks_idx]))
         )
     else:
         all_data_sorted = sorted(all_data, key=lambda r: (r[0], r[acct_idx]))
     return all_data_sorted, headers
 
-def paid_org_search_term_report_single(gads_service, client, start_date, end_date, time_seg, customer_id, **kwargs):
+
+def paid_org_search_term_report_single(
+    gads_service, client, start_date, end_date, time_seg, customer_id, **kwargs
+):
     """
     Generates a Paid and Organic Search Term report for the selected customerID/account.
 
@@ -1008,18 +1182,29 @@ def paid_org_search_term_report_single(gads_service, client, start_date, end_dat
         tuple: (table_data_sorted, headers) for display or export.
     """
     # enum decoders
-    time_seg_string = f'segments.{time_seg}'
+    time_seg_string = f"segments.{time_seg}"
     undecoded_enums = get_enums(client)
-    channel_type_enum, *extra, serp_type_enum, click_type, keyword_match_type_enum, device_type_enum = undecoded_enums
+    (
+        channel_type_enum,
+        *extra,
+        serp_type_enum,
+        click_type,
+        keyword_match_type_enum,
+        device_type_enum,
+    ) = undecoded_enums
     # unpack toggles
     include_channel_types = kwargs.get("include_channel_types", False)
     include_campaign_info = kwargs.get("include_campaign_info", False)
     include_adgroup_info = kwargs.get("include_adgroup_info", False)
     include_device_info = kwargs.get("include_device_info", False)
     # GAQL query
-    paid_org_search_term_query = queries.paid_organic_search_term_view_query(start_date, end_date, time_seg_string)
+    paid_org_search_term_query = queries.paid_organic_search_term_view_query(
+        start_date, end_date, time_seg_string
+    )
     # fetch data and populate the table_data list
-    response = gads_service.search_stream(customer_id=customer_id, query=paid_org_search_term_query)
+    response = gads_service.search_stream(
+        customer_id=customer_id, query=paid_org_search_term_query
+    )
     # initialize an empty list to store the data
     table_data = []
     # populate the table_data list
@@ -1027,15 +1212,23 @@ def paid_org_search_term_report_single(gads_service, client, start_date, end_dat
         for row in data.results:
             date_value = getattr(row.segments, time_seg)
             channel_type = (
-                channel_type_enum.AdvertisingChannelType.Name(row.campaign.advertising_channel_type)
-                if hasattr(row.campaign, 'advertising_channel_type') else 'UNDEFINED'
+                channel_type_enum.AdvertisingChannelType.Name(
+                    row.campaign.advertising_channel_type
+                )
+                if hasattr(row.campaign, "advertising_channel_type")
+                else "UNDEFINED"
             )
             serp_type = (
-                serp_type_enum.SearchEngineResultsPageType.Name(row.segments.search_engine_results_page_type)
-                if hasattr(row.segments, 'search_engine_results_page_type') else 'UNDEFINED'
+                serp_type_enum.SearchEngineResultsPageType.Name(
+                    row.segments.search_engine_results_page_type
+                )
+                if hasattr(row.segments, "search_engine_results_page_type")
+                else "UNDEFINED"
             )
             keyword_match_type = (
-                keyword_match_type_enum.KeywordMatchType.Name(row.segments.keyword.info.match_type)
+                keyword_match_type_enum.KeywordMatchType.Name(
+                    row.segments.keyword.info.match_type
+                )
                 if getattr(row.segments, "keyword", None)
                 and hasattr(row.segments.keyword, "info")
                 and hasattr(row.segments.keyword.info, "match_type")
@@ -1043,7 +1236,8 @@ def paid_org_search_term_report_single(gads_service, client, start_date, end_dat
             )
             device_type = (
                 device_type_enum.Device.Name(row.segments.device)
-                if hasattr(row.segments, 'device') else 'UNDEFINED'
+                if hasattr(row.segments, "device")
+                else "UNDEFINED"
             )
             organic_queries = getattr(row.metrics, "organic_queries", 0) or 0
             organic_impressions = getattr(row.metrics, "organic_impressions", 0) or 0
@@ -1052,15 +1246,22 @@ def paid_org_search_term_report_single(gads_service, client, start_date, end_dat
             paid_clicks = getattr(row.metrics, "clicks", 0) or 0
             combined_queries = getattr(row.metrics, "combined_queries", 0) or 0
             combined_clicks = getattr(row.metrics, "combined_clicks", 0) or 0
-            combined_clicks_per_query = getattr(row.metrics, "combined_clicks_per_query", 0) or 0
-            organic_impr_per_query = getattr(row.metrics, "organic_impressions_per_query", 0) or 0
-            organic_clicks_per_query = getattr(row.metrics, "organic_clicks_per_query", 0) or 0
+            combined_clicks_per_query = (
+                getattr(row.metrics, "combined_clicks_per_query", 0) or 0
+            )
+            organic_impr_per_query = (
+                getattr(row.metrics, "organic_impressions_per_query", 0) or 0
+            )
+            organic_clicks_per_query = (
+                getattr(row.metrics, "organic_clicks_per_query", 0) or 0
+            )
             paid_ctr_raw = getattr(row.metrics, "ctr", 0) or 0
             avg_cpc_micros = getattr(row.metrics, "average_cpc", 0) or 0
             total_impressions = organic_impressions + paid_impressions
             avg_cpc_value = (
                 helpers.micros_to_decimal(avg_cpc_micros, Decimal("0.001"))
-                if paid_clicks else Decimal("0.000")
+                if paid_clicks
+                else Decimal("0.000")
             )
             keyword_info = getattr(getattr(row.segments, "keyword", None), "info", None)
             keyword_text = getattr(keyword_info, "text", None) if keyword_info else None
@@ -1095,33 +1296,35 @@ def paid_org_search_term_report_single(gads_service, client, start_date, end_dat
             # append dict
             table_data.append(paid_org_search_term_dict)
     # define the headers for the table
-    headers = ["Date", "Account name", "Customer ID"] # primary dimensions
+    headers = ["Date", "Account name", "Customer ID"]  # primary dimensions
     if include_campaign_info:
         headers += ["Campaign name", "Campaign ID"]
-    if include_channel_types: 
+    if include_channel_types:
         headers.append("Campaign type")
     if include_adgroup_info:
         headers += ["Ad group name", "Ad group ID"]
     if include_device_info:
         headers.append("device")
     # metrics
-    headers += ["SERP type",
-                "keyword match type",
-                "keyword text",
-                "org queries",
-                "org impr",
-                "org impr per query",
-                "org clicks",
-                "org clicks per query",
-                "paid impr",
-                "paid clicks",
-                "paid ctr",
-                "avg cpc",
-                "total cost",
-                "total queries",
-                "total impr",
-                "total clicks",
-                "total clicks per query"]
+    headers += [
+        "SERP type",
+        "keyword match type",
+        "keyword text",
+        "org queries",
+        "org impr",
+        "org impr per query",
+        "org clicks",
+        "org clicks per query",
+        "paid impr",
+        "paid clicks",
+        "paid ctr",
+        "avg cpc",
+        "total cost",
+        "total queries",
+        "total impr",
+        "total clicks",
+        "total clicks per query",
+    ]
     metric_fields = {
         "org queries",
         "org impr",
@@ -1144,17 +1347,19 @@ def paid_org_search_term_report_single(gads_service, client, start_date, end_dat
         key = tuple(row.get(field) for field in dimension_fields)
         if key not in aggregated:
             aggregated[key] = {field: row.get(field) for field in dimension_fields}
-            aggregated[key].update({
-                "org queries": 0,
-                "org impr": 0,
-                "org clicks": 0,
-                "paid impr": 0,
-                "paid clicks": 0,
-                "total queries": 0,
-                "total impr": 0,
-                "total clicks": 0,
-                "_total_cost": Decimal("0.00"),
-            })
+            aggregated[key].update(
+                {
+                    "org queries": 0,
+                    "org impr": 0,
+                    "org clicks": 0,
+                    "paid impr": 0,
+                    "paid clicks": 0,
+                    "total queries": 0,
+                    "total impr": 0,
+                    "total clicks": 0,
+                    "_total_cost": Decimal("0.00"),
+                }
+            )
         entry = aggregated[key]
         entry["org queries"] += row.get("org queries", 0) or 0
         entry["org impr"] += row.get("org impr", 0) or 0
@@ -1177,35 +1382,54 @@ def paid_org_search_term_report_single(gads_service, client, start_date, end_dat
         total_queries = entry.get("total queries", 0)
         total_cost_raw = entry.pop("_total_cost", Decimal("0.00"))
         entry["org impr per query"] = (
-            (Decimal(entry["org impr"]) / Decimal(org_queries)).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
-            if org_queries else Decimal("0")
+            (Decimal(entry["org impr"]) / Decimal(org_queries)).quantize(
+                Decimal("0.0001"), rounding=ROUND_HALF_UP
+            )
+            if org_queries
+            else Decimal("0")
         )
         entry["org clicks per query"] = (
-            (Decimal(entry["org clicks"]) / Decimal(org_queries)).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
-            if org_queries else Decimal("0")
+            (Decimal(entry["org clicks"]) / Decimal(org_queries)).quantize(
+                Decimal("0.0001"), rounding=ROUND_HALF_UP
+            )
+            if org_queries
+            else Decimal("0")
         )
         entry["paid ctr"] = (
-            (Decimal(paid_clicks) / Decimal(paid_impr)).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
-            if paid_impr else Decimal("0")
+            (Decimal(paid_clicks) / Decimal(paid_impr)).quantize(
+                Decimal("0.0001"), rounding=ROUND_HALF_UP
+            )
+            if paid_impr
+            else Decimal("0")
         )
         entry["avg cpc"] = (
-            (total_cost_raw / Decimal(paid_clicks)).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP)
-            if paid_clicks else Decimal("0.000")
+            (total_cost_raw / Decimal(paid_clicks)).quantize(
+                Decimal("0.001"), rounding=ROUND_HALF_UP
+            )
+            if paid_clicks
+            else Decimal("0.000")
         )
-        entry["total cost"] = total_cost_raw.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        entry["total cost"] = total_cost_raw.quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
         entry["total clicks per query"] = (
-            (Decimal(entry["total clicks"]) / Decimal(total_queries)).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
-            if total_queries else Decimal("0")
+            (Decimal(entry["total clicks"]) / Decimal(total_queries)).quantize(
+                Decimal("0.0001"), rounding=ROUND_HALF_UP
+            )
+            if total_queries
+            else Decimal("0")
         )
         aggregated_rows.append(entry)
     aggregated_rows_sorted = sorted(
-        aggregated_rows,
-        key=lambda r: (r.get("Date"), -float(r.get("total clicks", 0)))
+        aggregated_rows, key=lambda r: (r.get("Date"), -float(r.get("total clicks", 0)))
     )
     filtered_data = [[row.get(h) for h in headers] for row in aggregated_rows_sorted]
     return filtered_data, headers
 
-def paid_org_search_term_report_all(gads_service, client, start_date, end_date, time_seg, accounts_info, **kwargs):
+
+def paid_org_search_term_report_all(
+    gads_service, client, start_date, end_date, time_seg, accounts_info, **kwargs
+):
     """
     Generates a Paid and Organic Search Term report for all accounts listed in account_info.
 
@@ -1227,7 +1451,13 @@ def paid_org_search_term_report_all(gads_service, client, start_date, end_date, 
         print(f"Processing {account_descriptive}...")
         try:
             table_data, headers = paid_org_search_term_report_single(
-                gads_service, client, start_date, end_date, time_seg, customer_id, **kwargs
+                gads_service,
+                client,
+                start_date,
+                end_date,
+                time_seg,
+                customer_id,
+                **kwargs,
             )
             all_data.extend(table_data)
         except Exception as e:
@@ -1237,24 +1467,36 @@ def paid_org_search_term_report_all(gads_service, client, start_date, end_date, 
         return [], []
     # sort by: time index (0), account name (1), descending total combined clicks
     acct_idx = headers.index("Account name") if "Account name" in headers else 1
-    comb_clicks_idx = headers.index("total combined clicks") if "total combined clicks" in headers else -1
+    comb_clicks_idx = (
+        headers.index("total combined clicks")
+        if "total combined clicks" in headers
+        else -1
+    )
     if comb_clicks_idx >= 0:
         all_data_sorted = sorted(
-            all_data,
-            key=lambda r: (r[0], r[acct_idx], -float(r[comb_clicks_idx]))
+            all_data, key=lambda r: (r[0], r[acct_idx], -float(r[comb_clicks_idx]))
         )
     else:
         all_data_sorted = sorted(all_data, key=lambda r: (r[0], r[acct_idx]))
     return all_data_sorted, headers
 
+
 """
 BUDGET REPORTS
 """
-def budget_report_single(gads_service, client, start_date, end_date, time_seg, customer_id):
+
+
+def budget_report_single(
+    gads_service, client, start_date, end_date, time_seg, customer_id
+):
     print("Budget report - single", "test complete!")
 
-def budget_report_all(gads_service, client, start_date, end_date, time_seg, accounts_info):
+
+def budget_report_all(
+    gads_service, client, start_date, end_date, time_seg, accounts_info
+):
     print("Budget report - all, test complete!")
+
 
 # Prototyping/testing
 """
