@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""Google Ads API service utilities and report execution helpers."""
+
 import os
 import sys
 from collections import defaultdict
@@ -18,26 +20,21 @@ import queries
 
 
 def generate_services(yaml_loc=None):
-    """
-    Authenticates the Google Ads client using the provided YAML file and generates the service for use in API calls.
-
-    Requires a valid YAML configuration file for Google Ads API authentication.
-
-    The YAML file should contain the the developer token (required) and one of the following combinations of credentials:
-     - OAuth2 credentials: client ID, client secret, refresh token
-     - Service account credentials: service-account.json file obtain through Google Cloud Project
-
-    The file should be named 'google-ads.yaml' and located in the same directory as the 'main.py' file.
-    The script will check if the YAML file exists and is valid before proceeding.
-    If the YAML file is not found or is invalid, an error message will be printed and the script will exit.
+    """Authenticate and instantiate Google Ads API services.
 
     Args:
-        yaml_loc (str): Optional path to the YAML config file. If None, use default.
+        yaml_loc (str | None): Optional path to the Google Ads configuration
+            file. When ``None`` the default ``google-ads.yaml`` adjacent to the
+            module is used.
 
     Returns:
-        gads_service (GoogleAdsService): The Google Ads service object, used for making API calls.
-        client (GoogleAdsClient): The Google Ads client object used for authentication and configuration.
+        tuple[GoogleAdsService, CustomerService, GoogleAdsClient]: The Google
+        Ads service clients required for downstream interactions.
+
+    Raises:
+        SystemExit: If the configuration file is missing or invalid.
     """
+
     # establish vars
     if yaml_loc is None:
         yaml_loc = os.path.join(
@@ -71,18 +68,18 @@ def generate_services(yaml_loc=None):
 
 
 def get_accounts(gads_service, customer_service, client):
-    """
-    Fetches subaccounts (non-manager) under the authenticated MCC.
+    """Fetch subaccounts under the authenticated manager account.
 
     Args:
-        Google Ads Authorized Client objects:
-            - gads_service (GoogleAdsService): The Google Ads service object, used for making API calls.
-            - customer_service (CustomerService): Google accounts service object, used for authorization and customer lookup.
-            - client (GoogleAdsClient): The Google Ads client object used for authentication and configuration.
+        gads_service (GoogleAdsService): Service used for GAQL queries.
+        customer_service (CustomerService): Service for customer lookups.
+        client (GoogleAdsClient): Authenticated Google Ads client instance.
 
     Returns:
-        tuple: (accounts_list, headers, accounts_dict, number_of_accounts)
+        tuple[list[list[str]], list[str], dict[str, str], int]: Account table,
+        headers, dictionary mapping, and total count.
     """
+
     customer_client_query = queries.customer_client_query()
     mcc_id = str(client.login_customer_id)
     mcc_response = gads_service.search_stream(
@@ -109,22 +106,16 @@ DECODERS/GETTERS
 
 
 def get_enums(client):
-    """
-    Fetches the enums for AdvertisingChannelType and AdGroupType from the Google Ads API client.
+    """Retrieve commonly used enumeration classes from the API client.
 
     Args:
-        client (GoogleAdsClient): The Google Ads client object used for authentication and configuration.
+        client (GoogleAdsClient): Authenticated Google Ads client instance.
 
     Returns:
-        tuple:
-            - channel_type_enum
-            - ad_group_type_enum
-            - ad_type_enum
-            - serp_type
-            - click_type_enum
-            - keyword_match_type_enum
-            - device_type_enum
+        tuple: The enumeration containers for channel type, ad group type, ad
+        type, SERP type, click type, keyword match type, and device type.
     """
+
     channel_type_enum = client.enums.AdvertisingChannelTypeEnum
     ad_group_type_enum = client.enums.AdGroupTypeEnum
     ad_type_enum = client.enums.AdTypeEnum
@@ -144,6 +135,18 @@ def get_enums(client):
 
 
 def get_labels(gads_service, client, customer_id):
+    """Fetch enabled labels for a specific customer.
+
+    Args:
+        gads_service (GoogleAdsService): Service used for label queries.
+        client (GoogleAdsClient): Authenticated API client.
+        customer_id (str): Target customer identifier.
+
+    Returns:
+        tuple[list[list[str]], list[str], dict[str, str]]: Table data, headers,
+        and mapping of label IDs to names.
+    """
+
     label_query = queries.label_query()
     label_response = gads_service.search_stream(
         customer_id=customer_id, query=label_query
@@ -161,6 +164,18 @@ def get_labels(gads_service, client, customer_id):
 
 
 def get_campaign_groups(gads_service, client, customer_id):
+    """Fetch enabled campaign groups for the specified customer.
+
+    Args:
+        gads_service (GoogleAdsService): Service used for GAQL queries.
+        client (GoogleAdsClient): Authenticated API client.
+        customer_id (str): Target customer identifier.
+
+    Returns:
+        tuple[list[list[str]], list[str], dict[str, str]]: Table data, headers,
+        and mapping of campaign group IDs to names.
+    """
+
     camp_group_query = queries.camp_group_query()
     camp_group_response = gads_service.search_stream(
         customer_id=customer_id, query=camp_group_query
@@ -181,10 +196,21 @@ def get_campaign_groups(gads_service, client, customer_id):
 
 # exceptions wrapper
 def handle_exceptions(func):
+    """Decorator providing consistent error handling for API interactions."""
+
     def print_error(func_name, error):
+        """Log a formatted error message prior to exiting.
+
+        Args:
+            func_name (str): Name of the function where the error occurred.
+            error (Exception): Exception instance captured.
+        """
+
         print(f"\nError in function '{func_name}': {repr(error)} - Exiting...\n")
 
     def wrapper(*args, **kwargs):
+        """Execute the decorated function and translate known failures."""
+
         try:
             return func(*args, **kwargs)
         # GAds specific errors
@@ -244,6 +270,18 @@ AUDITING REPORTS
 
 
 def complete_labels_audit(gads_service, client, customer_id):
+    """Compile campaign and ad group label assignments for an account.
+
+    Args:
+        gads_service (GoogleAdsService): Service used to run GAQL queries.
+        client (GoogleAdsClient): Authenticated client for enum decoding.
+        customer_id (str): Target customer ID.
+
+    Returns:
+        tuple[list[list], list[str], dict]: Tabular audit data, column headers,
+        and a structured dictionary keyed by campaign and ad group IDs.
+    """
+
     # enum decoders
     undecoded_enums = get_enums(client)
     channel_type_enum, ad_group_type_enum, *extra = undecoded_enums
@@ -342,25 +380,22 @@ PERFORMANCE REPORTS
 def arc_report_single(
     gads_service, client, start_date, end_date, time_seg, customer_id, **kwargs
 ):
-    """
-    Replicates the Ad Response Codes report for the selected customerID/account,
-    aggregating spend by Date, Account, ARC, and Channel Type, and optionally
-    summarizing all channel types into ARC-level totals.
+    """Generate the Ad Response Codes report for a single account.
 
     Args:
-        gads_service: The Google Ads service client.
-        client: The authenticated Google Ads client.
-        start_date (str): Start date (YYYY-MM-DD).
-        end_date (str): End date (YYYY-MM-DD).
-        time_seg (str): Time segmentation (e.g., 'date', 'month').
-        include_channel_types (bool): Whether to include channel types in output.
-        customer_id (str): Google Ads account customer ID.
-        kwargs (dict): Contains report toggle options
+        gads_service (GoogleAdsService): Service used to execute GAQL queries.
+        client (GoogleAdsClient): Authenticated API client for enum decoding.
+        start_date (str): Inclusive start date (``YYYY-MM-DD``).
+        end_date (str): Inclusive end date (``YYYY-MM-DD``).
+        time_seg (str): Time segmentation key (for example ``"date"``).
+        customer_id (str): Customer ID for the target account.
+        **kwargs: Optional toggles controlling channel, campaign, and ad group
+            inclusion.
 
     Returns:
-        tuple:
-            (table_data, headers)
+        tuple[list[list], list[str]]: Table rows and corresponding headers.
     """
+
     # enum decoders
     undecoded_enums = get_enums(client)
     channel_type_enum, *extra = undecoded_enums
@@ -443,21 +478,23 @@ def arc_report_single(
 def arc_report_all(
     gads_service, client, start_date, end_date, time_seg, accounts_info, **kwargs
 ):
-    """
-    Generates the Ad Response Codes report for all accounts listed in account_info.
+    """Generate the Ad Response Codes report for multiple accounts.
 
     Args:
-        gads_service: The Google Ads service client.
-        client: The authenticated Google Ads client.
-        start_date (str): Start date (YYYY-MM-DD).
-        end_date (str): End date (YYYY-MM-DD).
-        time_seg (str): Time segment or label.
-        accounts_info (dict): Dictionary mapping account codes to [customer_id, descriptive_name].
-        kwargs (dict): Contains report toggle options
+        gads_service (GoogleAdsService): Service used to execute GAQL queries.
+        client (GoogleAdsClient): Authenticated API client.
+        start_date (str): Inclusive start date (``YYYY-MM-DD``).
+        end_date (str): Inclusive end date (``YYYY-MM-DD``).
+        time_seg (str): Time segmentation key (for example ``"date"``).
+        accounts_info (dict[str, str]): Mapping of customer IDs to names.
+        **kwargs: Optional toggles controlling channel, campaign, and ad group
+            inclusion.
 
     Returns:
-        tuple: (all_data_sorted, headers) for display or export.
+        tuple[list[list], list[str]]: Combined table rows across accounts and
+        the shared headers.
     """
+
     all_data = []
     headers = None
     for customer_id, account_descriptive in accounts_info.items():
@@ -493,20 +530,19 @@ def arc_report_all(
 def account_report_single(
     gads_service, client, start_date, end_date, time_seg, customer_id, **kwargs
 ):
-    """
-    Generates a top level performance report for the selected customerID/account.
+    """Generate an account-level performance report for one account.
 
     Args:
-        gads_service: The Google Ads service client.
-        client: The authenticated Google Ads client.
-        start_date (str): Start date (YYYY-MM-DD).
-        end_date (str): End date (YYYY-MM-DD).
-        time_seg (str): Time segment or label.
-        customer_id (str): The selected account customerID.
-        kwargs (dict): Contains report toggle options if available.
+        gads_service (GoogleAdsService): Service used for GAQL queries.
+        client (GoogleAdsClient): Authenticated API client.
+        start_date (str): Inclusive start date (``YYYY-MM-DD``).
+        end_date (str): Inclusive end date (``YYYY-MM-DD``).
+        time_seg (str): Time segmentation key.
+        customer_id (str): Target customer ID.
+        **kwargs: Reserved for future report toggle options.
 
     Returns:
-        tuple: (table_data_sorted, headers) for display or export.
+        tuple[list[list], list[str]]: Table rows and headers.
     """
     # enum decoders
     time_seg_string = f"segments.{time_seg}"
@@ -584,20 +620,20 @@ def account_report_single(
 def account_report_all(
     gads_service, client, start_date, end_date, time_seg, accounts_info, **kwargs
 ):
-    """
-    Generates a top level performance report for all accounts listed in account_info.
+    """Generate an account-level performance report for multiple accounts.
 
     Args:
-        gads_service: The Google Ads service client.
-        client: The authenticated Google Ads client.
-        start_date (str): Start date (YYYY-MM-DD).
-        end_date (str): End date (YYYY-MM-DD).
-        time_seg (str): Time segment or label.
-        accounts_info (dict): Dictionary mapping account codes to [customer_id, descriptive_name].
-        kwargs (dict): Contains report toggle options if applicable.
+        gads_service (GoogleAdsService): Service used for GAQL queries.
+        client (GoogleAdsClient): Authenticated API client.
+        start_date (str): Inclusive start date (``YYYY-MM-DD``).
+        end_date (str): Inclusive end date (``YYYY-MM-DD``).
+        time_seg (str): Time segmentation key.
+        accounts_info (dict[str, str]): Mapping of customer IDs to account
+            names.
+        **kwargs: Reserved for future report toggle options.
 
     Returns:
-        tuple: (all_data_sorted, headers) for display or export.
+        tuple[list[list], list[str]]: Combined table rows and headers.
     """
     all_data = []
     headers = None
@@ -629,25 +665,20 @@ def account_report_all(
 def ad_level_report_single(
     gads_service, client, start_date, end_date, time_seg, customer_id, **kwargs
 ):
-    """
-    Replicates the Google Ads Report Studio by pulling ad performance data
-    with ad group and ad types using ad_group_ad as the main resource,
-    and campaign-level data for Performance Max.
+    """Generate ad-level performance data for a single account.
 
     Args:
-        gads_service: The Google Ads service client.
-        client: The authenticated Google Ads client.
-        start_date (str): Start date (YYYY-MM-DD).
-        end_date (str): End date (YYYY-MM-DD).
-        time_seg (str): Time segment or label.
-        customer_id (str): The selected account customerID.
-        kwargs (dict): Contains report toggle options:
-            - include_channel_types
-            - include_campaign_info
-            - include_adgroup_info
+        gads_service (GoogleAdsService): Service used to execute GAQL queries.
+        client (GoogleAdsClient): Authenticated API client for enum decoding.
+        start_date (str): Inclusive start date (``YYYY-MM-DD``).
+        end_date (str): Inclusive end date (``YYYY-MM-DD``).
+        time_seg (str): Time segmentation key.
+        customer_id (str): Target customer ID.
+        **kwargs: Toggle options that control inclusion of channel, campaign,
+            and ad group metadata.
 
     Returns:
-        tuple: (table_data, headers) for display or export.
+        tuple[list[list], list[str]]: Table rows and headers.
     """
     # enum decoders
     undecoded_enums = get_enums(client)
@@ -932,20 +963,21 @@ def ad_level_report_single(
 def ad_level_report_all(
     gads_service, client, start_date, end_date, time_seg, accounts_info, **kwargs
 ):
-    """
-    Generates ad scoped report for all accounts listed in account_info.
+    """Generate ad-level performance data for multiple accounts.
 
     Args:
-        gads_service: The Google Ads service client.
-        client: The authenticated Google Ads client.
-        start_date (str): Start date (YYYY-MM-DD).
-        end_date (str): End date (YYYY-MM-DD).
-        time_seg (str): Time segment or label.
-        customer_dict (dict): All available customer accounts.
-        kwargs (dict): Contains report toggle options
+        gads_service (GoogleAdsService): Service used to execute GAQL queries.
+        client (GoogleAdsClient): Authenticated API client.
+        start_date (str): Inclusive start date (``YYYY-MM-DD``).
+        end_date (str): Inclusive end date (``YYYY-MM-DD``).
+        time_seg (str): Time segmentation key.
+        accounts_info (dict[str, str]): Mapping of customer IDs to account
+            names.
+        **kwargs: Toggle options that control inclusion of channel, campaign,
+            and ad group metadata.
 
     Returns:
-        tuple: (all_data_sorted, headers) for display or export.
+        tuple[list[list], list[str]]: Combined table rows and headers.
     """
     all_data = []
     headers = None
@@ -983,20 +1015,20 @@ def ad_level_report_all(
 def click_view_report_single(
     gads_service, client, start_date, end_date, time_seg, customer_id, **kwargs
 ):
-    """
-    Generates a click view performance report for the selected customerID/account.
+    """Generate a ClickView performance report for a single account.
 
     Args:
-        gads_service: The Google Ads service client.
-        client: The authenticated Google Ads client.
-        start_date (str): Start date (YYYY-MM-DD).
-        end_date (str): End date (YYYY-MM-DD).
-        time_seg (str): Time segment or label.
-        customer_id (str): The selected account customerID.
-        kwargs: Dynamic toggles for channel types, campaign info, adgroup info, and device info.
+        gads_service (GoogleAdsService): Service used to execute GAQL queries.
+        client (GoogleAdsClient): Authenticated API client.
+        start_date (str): Inclusive start date (``YYYY-MM-DD``).
+        end_date (str): Inclusive end date (``YYYY-MM-DD``).
+        time_seg (str): Time segmentation key.
+        customer_id (str): Target customer ID.
+        **kwargs: Toggle options that control inclusion of channel, campaign,
+            ad group, and device metadata.
 
     Returns:
-        tuple: (table_data_sorted, headers) for display or export.
+        tuple[list[list], list[str]]: Table rows and headers.
     """
     # enum decoders
     time_seg_string = f"segments.{time_seg}"
@@ -1119,20 +1151,21 @@ def click_view_report_single(
 def click_view_report_all(
     gads_service, client, start_date, end_date, time_seg, accounts_info, **kwargs
 ):
-    """
-    Generates a click view performance report for all accounts listed in account_info.
+    """Generate a ClickView performance report for multiple accounts.
 
     Args:
-        gads_service: The Google Ads service client.
-        client: The authenticated Google Ads client.
-        start_date (str): Start date (YYYY-MM-DD).
-        end_date (str): End date (YYYY-MM-DD).
-        time_seg (str): Time segment or label.
-        accounts_info (dict): Dictionary mapping account codes to [customer_id, descriptive_name].
-        kwargs: Dynamic toggles for channel types, campaign info, adgroup info, and device info.
+        gads_service (GoogleAdsService): Service used to execute GAQL queries.
+        client (GoogleAdsClient): Authenticated API client.
+        start_date (str): Inclusive start date (``YYYY-MM-DD``).
+        end_date (str): Inclusive end date (``YYYY-MM-DD``).
+        time_seg (str): Time segmentation key.
+        accounts_info (dict[str, str]): Mapping of customer IDs to account
+            names.
+        **kwargs: Toggle options that control inclusion of channel, campaign,
+            ad group, and device metadata.
 
     Returns:
-        tuple: (all_data_sorted, headers) for display or export.
+        tuple[list[list], list[str]]: Combined table rows and headers.
     """
     all_data = []
     headers = None
@@ -1169,19 +1202,18 @@ def click_view_report_all(
 def paid_org_search_term_report_single(
     gads_service, client, start_date, end_date, time_seg, customer_id, **kwargs
 ):
-    """
-    Generates a Paid and Organic Search Term report for the selected customerID/account.
+    """Generate a paid and organic search term report for one account.
 
     Args:
-        gads_service: The Google Ads service client.
-        client: The authenticated Google Ads client.
-        start_date (str): Start date (YYYY-MM-DD).
-        end_date (str): End date (YYYY-MM-DD).
-        time_seg (str): Time segment or label.
-        customer_id (str): The selected account customerID.
+        gads_service (GoogleAdsService): Service used to execute GAQL queries.
+        client (GoogleAdsClient): Authenticated API client.
+        start_date (str): Inclusive start date (``YYYY-MM-DD``).
+        end_date (str): Inclusive end date (``YYYY-MM-DD``).
+        time_seg (str): Time segmentation key.
+        customer_id (str): Target customer ID.
 
     Returns:
-        tuple: (table_data_sorted, headers) for display or export.
+        tuple[list[list], list[str]]: Table rows and headers.
     """
     # enum decoders
     time_seg_string = f"segments.{time_seg}"
@@ -1432,20 +1464,20 @@ def paid_org_search_term_report_single(
 def paid_org_search_term_report_all(
     gads_service, client, start_date, end_date, time_seg, accounts_info, **kwargs
 ):
-    """
-    Generates a Paid and Organic Search Term report for all accounts listed in account_info.
+    """Generate a paid and organic search term report for multiple accounts.
 
     Args:
-        gads_service: The Google Ads service client.
-        client: The authenticated Google Ads client.
-        start_date (str): Start date (YYYY-MM-DD).
-        end_date (str): End date (YYYY-MM-DD).
-        time_seg (str): Time segment or label.
-        accounts_info (dict): Dictionary mapping account codes to [customer_id, descriptive_name].
-        kwargs: Dynamic toggles for channel types, campaign info, adgroup info, and device info.
+        gads_service (GoogleAdsService): Service used to execute GAQL queries.
+        client (GoogleAdsClient): Authenticated API client.
+        start_date (str): Inclusive start date (``YYYY-MM-DD``).
+        end_date (str): Inclusive end date (``YYYY-MM-DD``).
+        time_seg (str): Time segmentation key.
+        accounts_info (dict[str, str]): Mapping of customer IDs to account
+            names.
+        **kwargs: Dynamic toggles for including additional metadata.
 
     Returns:
-        tuple: (all_data_sorted, headers) for display or export.
+        tuple[list[list], list[str]]: Combined table rows and headers.
     """
     all_data = []
     headers = None
@@ -1491,17 +1523,48 @@ BUDGET REPORTS
 def budget_report_single(
     gads_service, client, start_date, end_date, time_seg, customer_id
 ):
+    """Placeholder for generating a budget report for one account.
+
+    Args:
+        gads_service (GoogleAdsService): Service used for GAQL queries.
+        client (GoogleAdsClient): Authenticated API client.
+        start_date (str): Inclusive start date (``YYYY-MM-DD``).
+        end_date (str): Inclusive end date (``YYYY-MM-DD``).
+        time_seg (str): Time segmentation key.
+        customer_id (str): Target customer ID.
+
+    Returns:
+        None: This placeholder prints a confirmation message.
+    """
+
     print("Budget report - single", "test complete!")
 
 
 def budget_report_all(
     gads_service, client, start_date, end_date, time_seg, accounts_info
 ):
+    """Placeholder for generating a budget report across accounts.
+
+    Args:
+        gads_service (GoogleAdsService): Service used for GAQL queries.
+        client (GoogleAdsClient): Authenticated API client.
+        start_date (str): Inclusive start date (``YYYY-MM-DD``).
+        end_date (str): Inclusive end date (``YYYY-MM-DD``).
+        time_seg (str): Time segmentation key.
+        accounts_info (dict[str, str]): Mapping of customer IDs to account
+            names.
+
+    Returns:
+        None: This placeholder prints a confirmation message.
+    """
+
     print("Budget report - all, test complete!")
 
 
 # Prototyping/testing
-"""
+
+
 def test_query(gads_service, client, customer_id):
-    return
-"""
+    """Placeholder function for exploratory GAQL queries."""
+
+    return None
