@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""Utility helpers for input handling and data presentation."""
+
 import csv
 import pydoc
 import re
@@ -12,6 +14,16 @@ from tabulate import tabulate
 
 # user error logging
 def user_error(err_type):
+    """Exit the application with a consistent error message.
+
+    Args:
+        err_type (int): Identifier representing the error scenario that
+            occurred.
+
+    Returns:
+        None: The function terminates the program via ``sys.exit``.
+    """
+
     if err_type == 1:
         sys.exit("Problem with MAIN loop.")
     if err_type == 2:
@@ -22,6 +34,18 @@ def user_error(err_type):
 
 # exit menu, 'exit'
 def custom_input(prompt=""):
+    """Wrap ``input`` to allow a graceful exit keyword.
+
+    Args:
+        prompt (str): Message displayed to the user before capturing input.
+
+    Returns:
+        str: The user-provided response.
+
+    Raises:
+        SystemExit: If the user enters ``exit``.
+    """
+
     user_input = original_input(prompt)
     if user_input.lower() == "exit":
         print("Exiting the program.")
@@ -41,7 +65,20 @@ MICROS_PER_UNIT = Decimal("1000000")
 
 
 def micros_to_decimal(micros, quantize=None, rounding=ROUND_HALF_UP):
-    """Convert a micro-amount value to a Decimal without float precision loss."""
+    """Convert a micro-amount value to a ``Decimal`` without precision loss.
+
+    Args:
+        micros (int | str | None): Value expressed in micros (one-millionth of
+            the base unit) or ``None``/empty string for zero.
+        quantize (Decimal | None): Optional decimal quantization level for the
+            result.
+        rounding (ROUND_HALF_UP): Rounding strategy applied when ``quantize`` is
+            provided.
+
+    Returns:
+        Decimal: The converted amount scaled to whole units.
+    """
+
     if micros in (None, ""):
         value = Decimal("0")
     else:
@@ -53,10 +90,16 @@ def micros_to_decimal(micros, quantize=None, rounding=ROUND_HALF_UP):
 
 # account/account selection
 def get_account_properties(accounts_info):
+    """Prompt the user to select an account from a provided collection.
+
+    Args:
+        accounts_info (dict[str, str]): Mapping of account IDs to their
+            descriptive names.
+
+    Returns:
+        tuple[str, str]: The selected account ID and name.
     """
-    Displays a list of available properties and prompts the user to select one.
-    Returns the selected account name and ID.
-    """
+
     print("\nSelect a account to report on:\n")
     account_info = display_account_list(accounts_info)
     account_id, account_name = account_info
@@ -69,16 +112,15 @@ def get_account_properties(accounts_info):
 
 
 def display_account_list(accounts_info):
-    """
-    Displays available accounts in a clean tabular format and prompts
-    the user to select one by number.
+    """Display accounts in a table and prompt for a selection.
 
     Args:
-        accounts_info (dict): {account_id: account_name}
+        accounts_info (dict[str, str]): Mapping of account IDs to names.
 
     Returns:
-        tuple: (account_id, account_name)
+        tuple[str, str]: The account ID and name chosen by the user.
     """
+
     account_table = []
     for i, (account_id, account_name) in enumerate(accounts_info.items(), start=1):
         account_table.append([i, account_name, account_id])
@@ -113,6 +155,18 @@ def display_account_list(accounts_info):
 
 # data handling/display
 def data_handling_options(table_data, headers, auto_view=False):
+    """Handle how report data should be presented to the user.
+
+    Args:
+        table_data (list[list[str]]): Rows representing report data.
+        headers (list[str]): Column headers for the report.
+        auto_view (bool): When ``True``, display the table immediately without
+            prompting the user for an output format.
+
+    Returns:
+        None: This function only prints or stores data locally.
+    """
+
     if auto_view:
         if not table_data or not headers:
             print("No data to display.")
@@ -136,13 +190,29 @@ def data_handling_options(table_data, headers, auto_view=False):
 
 
 def sanitize_filename(name):
+    """Remove invalid characters from a filename string.
+
+    Args:
+        name (str): Proposed filename provided by the user.
+
+    Returns:
+        str: Sanitized filename without disallowed characters.
     """
-    Removes invalid filename characters for cross-platform safety.
-    """
+
     return re.sub(r'[<>:"/\\|?*]', "", name)
 
 
 def save_csv(table_data, headers):
+    """Persist table data to a CSV file in the user's home directory.
+
+    Args:
+        table_data (list[list[str]]): Rows of report data to write.
+        headers (list[str]): Column headers for the output file.
+
+    Returns:
+        None: This function writes data to disk or logs errors.
+    """
+
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     default_file_name = f"gads_report_{timestamp}.csv"
     print(f"Default file name: {default_file_name}")
@@ -170,12 +240,18 @@ def save_csv(table_data, headers):
 
 
 def display_table(table_data, headers, auto_view=False):
-    """
-    Displays a table using the tabulate library.
+    """Render tabular data using the ``tabulate`` library.
+
     Args:
-        table_data (list): The data to display in the table.
-        headers (list): The headers for the table.
+        table_data (list[list[str]]): Data rows to display.
+        headers (list[str]): Header names for the table.
+        auto_view (bool): When ``True``, print the table immediately without
+            paging.
+
+    Returns:
+        None: The table is displayed using the configured output method.
     """
+
     if auto_view:
         print(tabulate(table_data, headers, tablefmt="simple_grid"))
     else:
@@ -187,14 +263,17 @@ def display_table(table_data, headers, auto_view=False):
 
 # data transforming/selecting
 def extract_arc(campaign_name):
-    """
-    Extracts the ARC designation from a campaign name.
-    The ARC is defined as the text after the last colon ':'.
+    """Extract the ARC designation from a campaign name string.
+
     Args:
-        campaign_name (str): The full campaign name.
+        campaign_name (str): Full campaign name that may contain an ARC value
+            separated by a colon.
+
     Returns:
-        str: The extracted ARC value, or 'UNDEFINED' if not found.
+        str: Extracted ARC value or ``"UNDEFINED"`` if the structure is
+        absent.
     """
+
     if not campaign_name or ":" not in campaign_name:
         return "UNDEFINED"
     arc = campaign_name.rsplit(":", 1)[-1].strip()
@@ -202,6 +281,12 @@ def extract_arc(campaign_name):
 
 
 def aggregate_channels():
+    """Prompt the user to determine if channel types should be aggregated.
+
+    Returns:
+        bool: ``True`` to aggregate channel types, ``False`` otherwise.
+    """
+
     while True:
         print(
             "\nWould you like a detailed report that includes aggregates channel types? (Y)es or (N)o"
@@ -221,6 +306,13 @@ def aggregate_channels():
 
 
 def include_channel_types():
+    """Prompt whether the report should include channel type details.
+
+    Returns:
+        bool: ``True`` when channel types should be included, ``False``
+        otherwise.
+    """
+
     while True:
         print(
             "\nWould you like a detailed report that includes channel types? (Y)es or (N)o"
@@ -240,6 +332,13 @@ def include_channel_types():
 
 
 def include_campaign_info():
+    """Prompt whether the report should include campaign names and IDs.
+
+    Returns:
+        bool: ``True`` if campaign metadata should be present, ``False``
+        otherwise.
+    """
+
     while True:
         print(
             "\nWould you like a detailed report that includes campaign names and IDs? (Y)es or (N)o"
@@ -259,6 +358,13 @@ def include_campaign_info():
 
 
 def include_adgroup_info():
+    """Prompt whether ad group identifiers should be part of the report.
+
+    Returns:
+        bool: ``True`` if ad group metadata should be included, ``False``
+        otherwise.
+    """
+
     while True:
         print(
             "\nWould you like a detailed report that includes ad group names and IDs? (Y)es or (N)o"
@@ -278,6 +384,12 @@ def include_adgroup_info():
 
 
 def include_device_info():
+    """Prompt whether device information should be incorporated into results.
+
+    Returns:
+        bool: ``True`` to include device segmentation, ``False`` otherwise.
+    """
+
     while True:
         print(
             "\nWould you like a detailed report that includes device types? (Y)es or (N)o"
@@ -301,7 +413,18 @@ SUPPORTED_DATE_FORMATS = ("%Y-%m-%d", "%Y%m%d")
 
 
 def parse_supported_date(date_str):
-    """Return a 'date' object if 'date_str' matches a supported format."""
+    """Convert a string to a ``date`` object using supported formats.
+
+    Args:
+        date_str (str): Input date string.
+
+    Returns:
+        date: Parsed ``datetime.date`` value.
+
+    Raises:
+        ValueError: If ``date_str`` does not match a supported format.
+    """
+
     for fmt in SUPPORTED_DATE_FORMATS:
         try:
             return datetime.strptime(date_str, fmt).date()
@@ -311,11 +434,17 @@ def parse_supported_date(date_str):
 
 
 def get_timerange(force_single=False):
+    """Prompt for a reporting date or range with validation.
+
+    Args:
+        force_single (bool): When ``True``, restrict the user to a single date
+            selection.
+
+    Returns:
+        tuple[str, str, str, str]: Selected description, start date, end date,
+        and time segmentation.
     """
-    Prompt the user to select either a single date or a date range,
-    with validation for supported formats (YYYY-MM-DD or YYYYMMDD) and logical order.
-    Defaults to today's date if user presses ENTER without input.
-    """
+
     if force_single:
         date_opt = "Specific date"
         print("The report you selected only accepts a single date for reporting.")
@@ -391,7 +520,17 @@ def get_timerange(force_single=False):
 
 
 def validate_date_input(date_str, default_today=False):
-    """Validate a date string and return it in the format provided by the user."""
+    """Validate a date string and normalize optional defaults.
+
+    Args:
+        date_str (str | None): Candidate date string.
+        default_today (bool): When ``True``, substitute today's date if the
+            user provides an empty string.
+
+    Returns:
+        str | None: Validated date string or ``None`` for invalid inputs.
+    """
+
     if not date_str:
         if default_today:
             today = date.today()
@@ -413,6 +552,13 @@ def validate_date_input(date_str, default_today=False):
 
 
 def get_last30days():
+    """Compute the date range covering the last 30 complete days.
+
+    Returns:
+        tuple[str, date, date, str]: Description, start date, end date, and
+        default time segmentation.
+    """
+
     today_actual = date.today()
     start_date = today_actual - timedelta(days=30)
     end_date = today_actual - timedelta(days=1)
@@ -422,6 +568,13 @@ def get_last30days():
 
 
 def get_last_calendar_month():
+    """Return the boundaries for the most recent full calendar month.
+
+    Returns:
+        tuple[str, date, date, str]: Description, start date, end date, and
+        time segmentation.
+    """
+
     today_actual = date.today()
     first_of_this_month = today_actual.replace(day=1)
     last_day_prev_month = first_of_this_month - timedelta(days=1)  # end_date
@@ -432,10 +585,19 @@ def get_last_calendar_month():
 
 
 def get_quarter_dates(year: int, quarter: int):
+    """Return the start and end dates for a specified quarter.
+
+    Args:
+        year (int): Target calendar year.
+        quarter (int): Quarter number (1-4).
+
+    Returns:
+        tuple[date, date]: Start and end date boundaries for the quarter.
+
+    Raises:
+        ValueError: If ``quarter`` is outside the range 1-4.
     """
-    Return the start and end dates for a given year and quarter (1 - 4).
-    The initial dates are static to allow quarter boundries to be altered in the future of needed.
-    """
+
     if quarter not in (1, 2, 3, 4):
         raise ValueError("Quarter must be between 1 and 4")
     if quarter == 1:
@@ -454,6 +616,13 @@ def get_quarter_dates(year: int, quarter: int):
 
 
 def get_current_quarter_to_date():
+    """Calculate the current quarter-to-date reporting window.
+
+    Returns:
+        tuple[str, date, date, str]: Description, start date, end date, and
+        time segmentation string.
+    """
+
     today_actual = date.today()
     year = today_actual.year
     month = today_actual.month
@@ -468,6 +637,13 @@ def get_current_quarter_to_date():
 
 
 def get_previous_calendar_quarter():
+    """Calculate the previous full calendar quarter date range.
+
+    Returns:
+        tuple[str, date, date, str]: Description, start date, end date, and
+        time segmentation string.
+    """
+
     today_actual = date.today()
     year = today_actual.year
     month = today_actual.month
