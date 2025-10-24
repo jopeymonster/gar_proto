@@ -15,8 +15,34 @@ These rules apply to **all contributions**, human or AI.
 - Use Python 3.11+.
 - Follow PEP8 formatting.
 - Write clean, maintainable, and well-commented code.
-- **No emojis are allowed in code, commit messages, or PR descriptions.**
 - Use descriptive names for variables, functions, and branches.
+- **No emojis are allowed in code, commit messages, or PR descriptions.**
+
+## Docstring Guidelines
+
+All functions, classes, and modules must include **docstrings** to clearly describe their purpose, inputs, and outputs.  
+We follow the **Google style docstring** format for consistency across the project.
+
+## Format Example
+
+```python
+def add_numbers(a: int, b: int) -> int:
+    """
+    Adds two integers together.
+
+    Args:
+        a (int): The first number.
+        b (int): The second number.
+
+    Returns:
+        int: The sum of `a` and `b`.
+
+    Example:
+        >>> add_numbers(2, 3)
+        5
+    """
+    return a + b
+```
 
 ## Commits
 - Commit messages should be imperative (e.g., "Add new validator" not "Added new validator").
@@ -27,7 +53,7 @@ These rules apply to **all contributions**, human or AI.
 - No failing tests or linting errors.
 - Add or update tests when introducing new functionality or fixing bugs.
 
-## Repository Hygiene ✅
+## Repository Hygiene
 To keep the repository clean and consistent:
 
 - **Do not commit**:
