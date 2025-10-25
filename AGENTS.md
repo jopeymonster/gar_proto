@@ -7,6 +7,7 @@ All AI agents must also follow the [CONTRIBUTING.md](CONTRIBUTING.md) guidelines
 
 ### Branching
 - All Codex-generated changes must target the `codex` branch.
+- Temporary tasks are acceptable, but must be merged into `codex` first.
 - Codex PRs should never target `develop` or `main` directly.
 - After review, Codex changes are merged into `develop`.
 
