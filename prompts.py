@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """User-facing prompts for interacting with the Google Ads Reporter."""
 
+import consts
 import helpers
 
 
@@ -12,12 +13,9 @@ def report_menu():
         str: Raw string selection provided by the user.
     """
 
-    print(
-        "Main Menu - Select from the options below:\n"
-        "1. Performance Reporting\n"
-        "2. Account Auditing\n"
-        "3. Budget Reporting\n"
-    )
+    print("Main Menu - Select from the options below:\n")
+    for option, label, _ in consts.REPORT_SCOPE_MENU_OPTIONS:
+        print(f"{option}. {label}")
     report_scope = input(
         "Choose a numbered option (1, 2, etc or 'exit' to exit): "
     ).strip()
@@ -31,26 +29,16 @@ def report_opt_prompt():
         str: Keyword describing the selected report type.
     """
 
-    report_opt_list = ["arc", "account", "ads", "clickview", "paid_organic_terms"]
     while True:
-        print(
-            "Reporting Options:\n"
-            "1. ARC Report\n"
-            "2. Account Report\n"
-            "3. Ads Report\n"
-            "4. GCLID/ClickView Report\n"
-            "5. Paid and Organic Search Terms Report\n"
-            # "X. Test Query\n"
-            "Or type 'exit' at any prompt to quit immediately.\n"
-        )
+        print("Reporting Options:\n")
+        for option, label, _ in consts.PERFORMANCE_REPORT_MENU_OPTIONS:
+            print(f"{option}. {label}")
+        print("Or type 'exit' at any prompt to quit immediately.\n")
         report_opt_input = input(
             "Choose a numbered option (1, 2, etc or 'exit' to exit): "
-        )
-        if report_opt_input in ["1", "2", "3", "4", "5"]:
-            index_choice = (
-                int(report_opt_input) - 1
-            )  # convert input to int and shift to 0-index
-            return report_opt_list[index_choice]
+        ).strip()
+        if report_opt_input in consts.PERFORMANCE_REPORT_MENU_LOOKUP:
+            return consts.PERFORMANCE_REPORT_MENU_LOOKUP[report_opt_input]
         else:
             print("Invalid option. Please try again.")
 
@@ -62,13 +50,10 @@ def audit_opt_prompt():
         str: Raw string selection from the auditing menu.
     """
 
-    print(
-        "Auditing Options:\n"
-        "1. Account Labels List\n"
-        "2. Campaign Group List\n"
-        "3. Campaign and Ad Group Label Assignments\n"
-        "Or type 'exit' at any prompt to quit immediately.\n"
-    )
+    print("Auditing Options:\n")
+    for option, label, _ in consts.AUDIT_REPORT_MENU_OPTIONS:
+        print(f"{option}. {label}")
+    print("Or type 'exit' at any prompt to quit immediately.\n")
     audit_opt = input("Choose 1, 2, 3, 4, etc ('exit' to exit): ")
     return audit_opt
 
@@ -104,24 +89,16 @@ def budget_opt_prompt():
         str: Keyword describing the chosen budget report type.
     """
 
-    budget_opt_list = [
-        "budget",
-    ]
     while True:
-        print(
-            "Budget Report Options:\n"
-            "1. Budget Report\n"
-            # "2. Budget Report\n"
-            "Or type 'exit' at any prompt to quit immediately.\n"
-        )
+        print("Budget Report Options:\n")
+        for option, label, _ in consts.BUDGET_REPORT_MENU_OPTIONS:
+            print(f"{option}. {label}")
+        print("Or type 'exit' at any prompt to quit immediately.\n")
         budget_opt_input = input(
             "Choose a numbered option (1, 2, etc or 'exit' to exit): "
-        )
-        if budget_opt_input in ["1", "2", "3", "4", "5"]:
-            index_choice = (
-                int(budget_opt_input) - 1
-            )  # convert input to int and shift to 0-index
-            return budget_opt_list[index_choice]
+        ).strip()
+        if budget_opt_input in consts.BUDGET_REPORT_MENU_LOOKUP:
+            return consts.BUDGET_REPORT_MENU_LOOKUP[budget_opt_input]
         else:
             print("Invalid option. Please try again.")
 
