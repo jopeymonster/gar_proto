@@ -163,20 +163,25 @@ def execution_time(start_time, end_time):
 
 
 # debugs
-def data_review(report_details, **toggles):
+def data_review(report_details, *, debug=False, **toggles):
     """Display the collected prompt inputs for debugging purposes.
 
     Args:
         report_details (tuple): Tuple containing date description, start date,
             end date, time segmentation, and account scope.
+        debug (bool): Flag indicating whether debug output should be emitted.
         **toggles: Keyword arguments representing additional configuration
             flags selected by the user.
 
     Returns:
-        None: The function only prints debugging information.
+        None: The function only prints debugging information when ``debug`` is
+        ``True``.
     """
+
+    if not debug:
+        return
+
     date_opt, start_date, end_date, time_seg, account_scope = report_details
-    # all report options
     print(
         "\nServices params passback after prompts:\n"
         f"account_scope: {account_scope}\n"
@@ -185,8 +190,35 @@ def data_review(report_details, **toggles):
         f"start_date: {start_date}\n"
         f"end_date: {end_date}"
     )
-    # specified options
     for key, value in toggles.items():
         print(f"{key}: {value}")
     input("\nPause for debug - press ENTER to continue or input 'exit' to exit: ")
     return
+
+
+def output_prompt():
+    """Prompt the user to choose how report results should be reviewed.
+
+    Returns:
+        str: Keyword describing the selected output handling option.
+    """
+
+    output_options = {
+        "1": "csv",
+        "2": "table",
+        "3": "auto",
+    }
+    while True:
+        print(
+            "Output handling options:\n"
+            "1. Save to CSV\n"
+            "2. Display table on screen\n"
+            "3. Auto-display results without additional prompts\n"
+        )
+        selection = input(
+            "Choose a numbered option (1-3 or 'exit' to exit): "
+        ).strip()
+        choice = output_options.get(selection)
+        if choice:
+            return choice
+        print("Invalid option. Please try again.")
