@@ -154,7 +154,7 @@ def display_account_list(accounts_info):
 
 
 # data handling/display
-def data_handling_options(table_data, headers, auto_view=False):
+def data_handling_options(table_data, headers, auto_view=False, preselected_output=None):
     """Handle how report data should be presented to the user.
 
     Args:
@@ -174,16 +174,20 @@ def data_handling_options(table_data, headers, auto_view=False):
         # display info automatically
         display_table(table_data, headers, auto_view=True)
         return
-    print(
-        "How would you like to view the report?\n1. CSV\n2. Display table on screen\n"
-    )
-    report_view = input("Choose 1 or 2 ('exit' to exit): ")
-    if report_view == "1":
-        # save to csv
+    if preselected_output:
+        report_view = preselected_output
+    else:
+        print(
+            "How would you like to view the report?\n1. CSV\n2. Display table on screen\n"
+        )
+        report_view = input("Choose 1 or 2 ('exit' to exit): ")
+
+    if report_view in ("1", "csv"):
         save_csv(table_data, headers)
-    elif report_view == "2":
-        # display table
+    elif report_view in ("2", "table"):
         display_table(table_data, headers)
+    elif report_view == "auto":
+        display_table(table_data, headers, auto_view=True)
     else:
         print("Invalid input, please select one of the indicated options.")
         sys.exit(1)
