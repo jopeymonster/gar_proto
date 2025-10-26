@@ -35,6 +35,7 @@ pyOpenSSL
 PySocks
 pyu2f
 PyYAML
+pytest
 requests
 rsa
 six
@@ -43,3 +44,4 @@ typing_extensions
 urllib3
 yarl
 zstandard
+ruff

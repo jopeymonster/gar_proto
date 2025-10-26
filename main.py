@@ -23,8 +23,6 @@ def parse_toggle_choice(value):
     )
 
 
-
-
 def canonicalize_scope(raw_scope):
     if raw_scope is None:
         return None
@@ -119,7 +117,9 @@ def parse_date_argument(argument, *, force_single=False):
     if prefix == "range":
         if force_single:
             raise ValueError("The selected report only accepts a single date.")
-        segments = [segment.strip() for segment in remainder.split(",") if segment.strip()]
+        segments = [
+            segment.strip() for segment in remainder.split(",") if segment.strip()
+        ]
         if len(segments) < 2:
             raise ValueError(
                 "Date range arguments must include start and end dates separated by commas."
@@ -186,6 +186,7 @@ def resolve_performance_option(cli_args):
     report_option = prompts.report_opt_prompt()
     cli_args.report_option = report_option
     return report_option
+
 
 def resolve_audit_option(cli_args):
     if getattr(cli_args, "report_option", None) in consts.AUDIT_REPORT_OPTIONS:
