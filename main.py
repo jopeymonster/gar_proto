@@ -668,7 +668,10 @@ def performance_menu(gads_service, client, full_accounts_info, cli_args):
 
     prompts.execution_time(start_time, end_time)
     helpers.data_handling_options(
-        table_data, headers, auto_view=False, preselected_output=output_mode
+        table_data,
+        headers,
+        auto_view=False,
+        preselected_output=output_mode,
     )
 
 
