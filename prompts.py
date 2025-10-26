@@ -192,7 +192,9 @@ def output_prompt():
             "2. Display table on screen\n"
             "3. Auto-display results without additional prompts\n"
         )
-        selection = input("Choose a numbered option (1-3 or 'exit' to exit): ").strip()
+        selection = input(
+            "Choose a numbered option (1-3 or 'exit' to exit): "
+        ).strip()
         choice = output_options.get(selection)
         if choice:
             return choice

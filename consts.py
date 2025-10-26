@@ -19,12 +19,6 @@ AUDIT_REPORT_OPTIONS = {
 
 BUDGET_REPORT_OPTIONS = {"budget"}
 
-BUDGET_REPORT_MENU_OPTIONS = (("1", "Budget Report", "budget"),)
-
-BUDGET_REPORT_MENU_LOOKUP = {
-    option: report for option, _, report in BUDGET_REPORT_MENU_OPTIONS
-}
-
 REPORT_SCOPE_ALIASES = {
     "performance": "performance",
     "perf": "performance",
@@ -35,16 +29,6 @@ REPORT_SCOPE_ALIASES = {
     "budget": "budget",
     "budgets": "budget",
     "b": "budget",
-}
-
-REPORT_SCOPE_MENU_OPTIONS = (
-    ("1", "Performance Reporting", "performance"),
-    ("2", "Account Auditing", "audit"),
-    ("3", "Budget Reporting", "budget"),
-)
-
-REPORT_SCOPE_MENU_LOOKUP = {
-    option: scope for option, _, scope in REPORT_SCOPE_MENU_OPTIONS
 }
 
 REPORT_OPTION_ALIASES = {
@@ -69,33 +53,11 @@ REPORT_OPTION_ALIASES = {
     "budget": ("budget", "budget"),
 }
 
-PERFORMANCE_REPORT_MENU_OPTIONS = (
-    ("1", "ARC Report", "arc"),
-    ("2", "Account Report", "account"),
-    ("3", "Ads Report", "ads"),
-    ("4", "GCLID/ClickView Report", "clickview"),
-    ("5", "Paid and Organic Search Terms Report", "paid_organic_terms"),
-)
-
-PERFORMANCE_REPORT_MENU_LOOKUP = {
-    option: report for option, _, report in PERFORMANCE_REPORT_MENU_OPTIONS
-}
-
 ACCOUNT_SCOPE_ALIASES = {
     "single": "single",
     "one": "single",
     "all": "all",
     "*": "all",
-}
-
-AUDIT_REPORT_MENU_OPTIONS = (
-    ("1", "Account Labels List", "account_labels"),
-    ("2", "Campaign Group List", "campaign_groups"),
-    ("3", "Campaign and Ad Group Label Assignments", "label_assignments"),
-)
-
-AUDIT_REPORT_MENU_LOOKUP = {
-    option: report for option, _, report in AUDIT_REPORT_MENU_OPTIONS
 }
 
 TIME_SEGMENT_ALIASES = {
@@ -160,10 +122,4 @@ AUDIT_OPTION_MAP = {
     "1": "account_labels",
     "2": "campaign_groups",
     "3": "label_assignments",
-}
-
-AUDIT_OPTION_DESCRIPTIONS = {
-    "account_labels": "Account Labels Only Audit selected...",
-    "campaign_groups": "Campaign Group Only Audit selected...",
-    "label_assignments": "Campaign and Ad Group Label Assignments Audit selected...",
 }
