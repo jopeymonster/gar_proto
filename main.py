@@ -6,142 +6,29 @@ import sys
 import time
 from textwrap import dedent
 
+import consts
 import helpers
 import prompts
 import services
 
-PERFORMANCE_REPORT_OPTIONS = {
-    "arc",
-    "account",
-    "ads",
-    "clickview",
-    "paid_organic_terms",
-}
-
-AUDIT_REPORT_OPTIONS = {
-    "account_labels",
-    "campaign_groups",
-    "label_assignments",
-}
-
-BUDGET_REPORT_OPTIONS = {"budget"}
-
-REPORT_SCOPE_ALIASES = {
-    "performance": "performance",
-    "perf": "performance",
-    "p": "performance",
-    "auditing": "audit",
-    "audit": "audit",
-    "a": "audit",
-    "budget": "budget",
-    "budgets": "budget",
-    "b": "budget",
-}
-
-REPORT_OPTION_ALIASES = {
-    "arc": ("performance", "arc"),
-    "account": ("performance", "account"),
-    "accounts": ("performance", "account"),
-    "ads": ("performance", "ads"),
-    "ad": ("performance", "ads"),
-    "clickview": ("performance", "clickview"),
-    "click_view": ("performance", "clickview"),
-    "gclid": ("performance", "clickview"),
-    "paid_organic_terms": ("performance", "paid_organic_terms"),
-    "paid-organic": ("performance", "paid_organic_terms"),
-    "paidorganic": ("performance", "paid_organic_terms"),
-    "account_labels": ("audit", "account_labels"),
-    "labels": ("audit", "account_labels"),
-    "campaign_groups": ("audit", "campaign_groups"),
-    "campaign-group": ("audit", "campaign_groups"),
-    "campaigns": ("audit", "campaign_groups"),
-    "label_assignments": ("audit", "label_assignments"),
-    "assignments": ("audit", "label_assignments"),
-    "budget": ("budget", "budget"),
-}
-
-ACCOUNT_SCOPE_ALIASES = {
-    "single": "single",
-    "one": "single",
-    "all": "all",
-    "*": "all",
-}
-
-TIME_SEGMENT_ALIASES = {
-    "day": "date",
-    "date": "date",
-    "daily": "date",
-    "week": "week",
-    "weekly": "week",
-    "month": "month",
-    "monthly": "month",
-    "quarter": "quarter",
-    "quarterly": "quarter",
-    "year": "year",
-    "yearly": "year",
-}
-
-OUTPUT_CHOICES = {"csv", "table", "auto"}
-
-TOGGLE_INCLUDE_VALUES = {"include", "in", "yes", "y", "true", "1"}
-TOGGLE_EXCLUDE_VALUES = {"exclude", "ex", "no", "n", "false", "0"}
-
 
 def parse_toggle_choice(value):
     normalized = str(value).strip().lower()
-    if normalized in TOGGLE_INCLUDE_VALUES:
+    if normalized in consts.TOGGLE_INCLUDE_VALUES:
         return True
-    if normalized in TOGGLE_EXCLUDE_VALUES:
+    if normalized in consts.TOGGLE_EXCLUDE_VALUES:
         return False
     raise argparse.ArgumentTypeError(
         "Toggle arguments accept 'include' or 'exclude' (case-insensitive)."
     )
 
 
-PERFORMANCE_TOGGLE_CONFIG = {
-    "include_channel_types": {
-        "attr": "include_channel_type",
-        "reports": {"arc", "ads", "clickview", "paid_organic_terms"},
-        "prompt": helpers.include_channel_types,
-        "label": "channel type segmentation",
-        "cli_option": "--channel-types",
-        "default": False,
-    },
-    "include_campaign_info": {
-        "attr": "include_campaign_info",
-        "reports": {"arc", "ads", "clickview", "paid_organic_terms"},
-        "prompt": helpers.include_campaign_info,
-        "label": "campaign metadata",
-        "cli_option": "--campaign-info",
-        "default": False,
-    },
-    "include_adgroup_info": {
-        "attr": "include_adgroup_info",
-        "reports": {"ads", "clickview", "paid_organic_terms"},
-        "prompt": helpers.include_adgroup_info,
-        "label": "ad group metadata",
-        "cli_option": "--ad-group",
-        "default": False,
-    },
-    "include_device_info": {
-        "attr": "include_device_type",
-        "reports": {"clickview", "paid_organic_terms"},
-        "prompt": helpers.include_device_info,
-        "label": "device segmentation",
-        "cli_option": "--device",
-        "default": False,
-    },
-}
-
-PERFORMANCE_TOGGLE_FIELDS = tuple(
-    config["attr"] for config in PERFORMANCE_TOGGLE_CONFIG.values()
-)
 
 
 def canonicalize_scope(raw_scope):
     if raw_scope is None:
         return None
-    scope = REPORT_SCOPE_ALIASES.get(str(raw_scope).lower())
+    scope = consts.REPORT_SCOPE_ALIASES.get(str(raw_scope).lower())
     if scope is None:
         raise ValueError(f"Unknown report scope: {raw_scope}")
     return scope
@@ -150,7 +37,7 @@ def canonicalize_scope(raw_scope):
 def canonicalize_option(raw_option, scope=None):
     if raw_option is None:
         return None, None
-    option_entry = REPORT_OPTION_ALIASES.get(str(raw_option).lower())
+    option_entry = consts.REPORT_OPTION_ALIASES.get(str(raw_option).lower())
     if option_entry is None:
         raise ValueError(f"Unknown report option: {raw_option}")
     option_scope, option = option_entry
@@ -183,7 +70,7 @@ def parse_account_argument(argument):
         return None, None
     parts = argument.split(":", 1)
     scope_alias = parts[0].strip().lower()
-    scope = ACCOUNT_SCOPE_ALIASES.get(scope_alias)
+    scope = consts.ACCOUNT_SCOPE_ALIASES.get(scope_alias)
     if scope is None:
         raise ValueError(f"Unknown account scope: {argument}")
     account_id = None
@@ -242,7 +129,7 @@ def parse_date_argument(argument, *, force_single=False):
         if start_val > end_val:
             raise ValueError("Start date cannot be later than end date.")
         if len(segments) >= 3:
-            seg_alias = TIME_SEGMENT_ALIASES.get(segments[2].lower())
+        seg_alias = consts.TIME_SEGMENT_ALIASES.get(segments[2].lower())
             if seg_alias is None:
                 raise ValueError(f"Unknown time segmentation: {segments[2]}")
             time_seg = seg_alias
@@ -294,26 +181,18 @@ def resolve_report_scope(cli_args):
 
 
 def resolve_performance_option(cli_args):
-    if getattr(cli_args, "report_option", None) in PERFORMANCE_REPORT_OPTIONS:
+    if getattr(cli_args, "report_option", None) in consts.PERFORMANCE_REPORT_OPTIONS:
         return cli_args.report_option
     report_option = prompts.report_opt_prompt()
     cli_args.report_option = report_option
     return report_option
 
-
-AUDIT_OPTION_MAP = {
-    "1": "account_labels",
-    "2": "campaign_groups",
-    "3": "label_assignments",
-}
-
-
 def resolve_audit_option(cli_args):
-    if getattr(cli_args, "report_option", None) in AUDIT_REPORT_OPTIONS:
+    if getattr(cli_args, "report_option", None) in consts.AUDIT_REPORT_OPTIONS:
         return cli_args.report_option
     while True:
         selection = prompts.audit_opt_prompt()
-        option = AUDIT_OPTION_MAP.get(selection)
+        option = consts.AUDIT_OPTION_MAP.get(selection)
         if option:
             cli_args.report_option = option
             return option
@@ -321,7 +200,7 @@ def resolve_audit_option(cli_args):
 
 
 def resolve_budget_option(cli_args):
-    if getattr(cli_args, "report_option", None) in BUDGET_REPORT_OPTIONS:
+    if getattr(cli_args, "report_option", None) in consts.BUDGET_REPORT_OPTIONS:
         return cli_args.report_option
     report_option = prompts.budget_opt_prompt()
     cli_args.report_option = report_option
@@ -333,7 +212,7 @@ def resolve_performance_toggles(cli_args, report_option):
     ignored_cli_arguments = []
     provided_fields = getattr(cli_args, "provided_toggle_fields", set())
 
-    for toggle_name, config in PERFORMANCE_TOGGLE_CONFIG.items():
+    for toggle_name, config in consts.PERFORMANCE_TOGGLE_CONFIG.items():
         attr_name = config["attr"]
         allowed_reports = config["reports"]
         current_value = getattr(cli_args, attr_name, None)
@@ -519,7 +398,7 @@ def build_parser():
     )
     parser.add_argument(
         "--output",
-        choices=sorted(OUTPUT_CHOICES),
+        choices=sorted(consts.OUTPUT_CHOICES),
         help="Preferred output handling for report data (csv, table, or auto).",
     )
     parser.add_argument(
@@ -623,7 +502,7 @@ def normalize_cli_args(parser, args):
     args.cli_mode = determine_cli_mode(args)
     args.provided_toggle_fields = {
         field
-        for field in PERFORMANCE_TOGGLE_FIELDS
+        for field in consts.PERFORMANCE_TOGGLE_FIELDS
         if getattr(args, field, None) is not None
     }
     return args
