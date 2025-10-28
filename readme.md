@@ -1,68 +1,150 @@
 # Google Ads Reporter
 
-Google Ads Reporter is a command-line tool that authenticates against the Google Ads API, executes curated GAQL queries, and presents the results in an interactive console workflow.
+Google Ads Reporter is a command-line package that authenticates against the Google Ads API, executes curated GAQL queries, and presents the results in both **interactive console mode** and **direct CLI mode**.
 
-## Overview
+---
 
-- Built with Python and the official `google-ads` client library.
-- Uses gRPC to communicate with the Google Ads API.
-- Supports automated account discovery and multiple reporting menus (performance, auditing, budgeting).
+## Features
 
-## Prerequisites
+* Built on Python 3.11+ with the official `google-ads` client library.
+* Uses gRPC to communicate with the Google Ads API.
+* Interactive menus for **performance, audit, and budgeting reports**.
+* CLI arguments for automation (headless mode).
+* Supports both **OAuth** and **Service Account** authentication.
+* CSV/JSON export modes available.
 
-- Python 3.11 or later.
-- Access to a Google Ads manager account with a valid developer token.
-- Permission to enable and use the Google Ads API within a Google Cloud project.
+---
 
-## Authentication Workflow
+## Installation
 
-1. **Create or select a Google Cloud project.** Enable the Google Ads API in the Google Cloud Console.
-2. **Decide on your credential type.**
-   - *OAuth client credentials*: create OAuth client ID and client secret, then generate a refresh token for the Google Ads manager account.
-   - *Service account credentials*: create a service account, delegate access to the Google Ads manager account, and download the JSON key file.
-3. **Prepare the configuration file.**
-   - Open or Copy `google-ads-template.yaml` from this repository.
-   - Fill in your developer token, login customer ID (manager account), and the credential values that correspond to your chosen auth method.
-   - Reference any JSON key file paths exactly as they exist on your machine.
-4. **Save the file as `google-ads.yaml`.** Place it next to `main.py`, or provide a full path at runtime.
-5. **Verify connectivity.** The application validates the file during startup and exits with an error if the configuration or credentials are incomplete.
-
-For additional background, consult the [Google Ads API getting started guide](https://developers.google.com/google-ads/api/docs/get-started/oauth-cloud-project).
-
-## Local Setup
+Clone the repository and set up a virtual environment:
 
 ```bash
+git clone https://github.com/jopeymonster/gar_proto.git
+cd gar_proto
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate   # or `.venv\Scripts\activate` on Windows
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
+You can also install it in **editable mode** for development:
+
+```bash
+pip install -e .
+```
+
+This registers the package so you can run it anywhere with:
+
+```bash
+python -m gar
+```
+
+---
+
+## Authentication
+
+1. **Create or select a Google Cloud project.** Enable the Google Ads API.
+2. **Choose authentication type:**
+
+   * **OAuth client credentials**: client ID/secret + refresh token.
+   * **Service account credentials**: JSON key file with delegated access.
+3. **Prepare configuration file:**
+
+   * Copy `gar/google-ads-template.yaml` to a local path.
+   * Fill in:
+
+     * Developer token
+     * Manager (login) customer ID
+     * OAuth or Service account values
+   * Save as `google-ads.yaml`.
+4. **Reference config file at runtime** with `--yaml` if not in the default location.
+
+**Important:** keep `google-ads.yaml` out of version control.
+
+For additional background, consult the [Google Ads API getting started guide](https://developers.google.com/google-ads/api/docs/get-started/oauth-cloud-project).
+
+---
+
 ## Usage
 
-Run the interactive reporter from the project root:
+### Interactive Mode (default)
 
 ```bash
-python main.py
+python -m gar
 ```
 
-To point to a configuration file in another location, supply the path via `--yaml` (short form `-y`):
+Drops you into an interactive workflow for selecting reports, accounts, and export options.
+
+### CLI Mode (automation)
+
+Provide arguments to skip menus:
 
 ```bash
-python main.py --yaml /path/to/google-ads.yaml
+# Run a performance report on account 1234567890
+python -m gar --report performance:ads --account single:1234567890 --output csv --yaml authfiles/google-ads.yaml
 ```
 
-Once authenticated, follow the on-screen prompts to select the account scope and reporting menu you need. The tool retrieves data, displays tabular summaries, and offers export options through the helper prompts.
+**Examples:**
 
-## Standard Workflow Guidelines
+* Report with report scope + option:
 
-1. Activate the virtual environment for every session (`source .venv/bin/activate`).
-2. Keep `google-ads.yaml` outside of version control; use the provided template for local copies.
-3. Run automated tests before committing changes:
+  ```bash
+  python -m gar --report performance:arc
+  ```
+* Account targeting:
+
+  ```bash
+  python -m gar --account single:1234567890
+  python -m gar --account all
+  ```
+* Date ranges:
+
+  ```bash
+  python -m gar --date last30days
+  python -m gar --date specific:2025-01-15
+  ```
+* Toggles:
+
+  ```bash
+  python -m gar --device include
+  python -m gar --channel-types exclude
+  ```
+
+Run `python -m gar --help` for the full argument list.
+
+---
+
+## Development & Contributing
+
+1. **Branching strategy**
+
+   * `codex`: agent-driven experiments
+   * `develop`: integration before `main`
+   * `main`: stable, tagged releases
+   * `f01.x`: feature scratchpad branches
+   * `issues`: critical bugfixes
+
+2. **Workflow**
+
+   * Work from feature branches (`f01.2`, etc.).
+   * Submit PRs → `develop` → `main`.
+   * `main` and `develop` are protected (no direct pushes).
+
+3. **Before committing**
+
    ```bash
+   ruff check .
+   ruff format .
    pytest
    ```
-4. When adding new reporting logic, mirror the existing patterns in `services.py`, `helpers.py`, and `prompts.py` to maintain consistent menu flows and data handling.
+
+4. **Pull Requests**
+
+   * Include test coverage for new args/features.
+   * Keep docstrings and CLI help updated.
+
+---
 
 ## License
 
@@ -70,13 +152,15 @@ This project is licensed under the [MIT License](LICENSE).
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
+---
+
 ## Contributors
 
-- Joe Thompson (@jopeymonster)
-- https://github.com/jopeymonster
+* Joe Thompson (@jopeymonster)
 
-## Legal Notice
+---
+
+## Legal
 
 The developers and contributors of this application, and all logic found within, are not responsible for actions taken using this application or services.
-
-Your privacy is respected when using our products and our **Privacy Policy** can be found here: [https://jopeymonster.github.io/privacy/](https://jopeymonster.github.io/privacy/)
+Your privacy is respected when using our products and our [Privacy Policy](https://jopeymonster.github.io/privacy/) applies.
