@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """User-facing prompts for interacting with the Google Ads Reporter."""
 
-import consts
-import helpers
+from gar import common
 
 
 # menu prompts
@@ -14,7 +13,7 @@ def report_menu():
     """
 
     print("Main Menu - Select from the options below:\n")
-    for option, label, _ in consts.REPORT_SCOPE_MENU_OPTIONS:
+    for option, label, _ in common.REPORT_SCOPE_MENU_OPTIONS:
         print(f"{option}. {label}")
     report_scope = input(
         "Choose a numbered option (1, 2, etc or 'exit' to exit): "
@@ -31,14 +30,14 @@ def report_opt_prompt():
 
     while True:
         print("Reporting Options:\n")
-        for option, label, _ in consts.PERFORMANCE_REPORT_MENU_OPTIONS:
+        for option, label, _ in common.PERFORMANCE_REPORT_MENU_OPTIONS:
             print(f"{option}. {label}")
         print("Or type 'exit' at any prompt to quit immediately.\n")
         report_opt_input = input(
             "Choose a numbered option (1, 2, etc or 'exit' to exit): "
         ).strip()
-        if report_opt_input in consts.PERFORMANCE_REPORT_MENU_LOOKUP:
-            return consts.PERFORMANCE_REPORT_MENU_LOOKUP[report_opt_input]
+        if report_opt_input in common.PERFORMANCE_REPORT_MENU_LOOKUP:
+            return common.PERFORMANCE_REPORT_MENU_LOOKUP[report_opt_input]
         else:
             print("Invalid option. Please try again.")
 
@@ -51,7 +50,7 @@ def audit_opt_prompt():
     """
 
     print("Auditing Options:\n")
-    for option, label, _ in consts.AUDIT_REPORT_MENU_OPTIONS:
+    for option, label, _ in common.AUDIT_REPORT_MENU_OPTIONS:
         print(f"{option}. {label}")
     print("Or type 'exit' at any prompt to quit immediately.\n")
     audit_opt = input("Choose 1, 2, 3, 4, etc ('exit' to exit): ")
@@ -62,7 +61,7 @@ def account_scope_prompt():
     """Prompt the user to choose between single-account or all-account scope.
 
     Returns:
-        str: ``"single"`` or ``"all"`` based on the selection.
+        str: "single" or "all" based on the selection.
     """
 
     while True:
@@ -91,14 +90,14 @@ def budget_opt_prompt():
 
     while True:
         print("Budget Report Options:\n")
-        for option, label, _ in consts.BUDGET_REPORT_MENU_OPTIONS:
+        for option, label, _ in common.BUDGET_REPORT_MENU_OPTIONS:
             print(f"{option}. {label}")
         print("Or type 'exit' at any prompt to quit immediately.\n")
         budget_opt_input = input(
             "Choose a numbered option (1, 2, etc or 'exit' to exit): "
         ).strip()
-        if budget_opt_input in consts.BUDGET_REPORT_MENU_LOOKUP:
-            return consts.BUDGET_REPORT_MENU_LOOKUP[budget_opt_input]
+        if budget_opt_input in common.BUDGET_REPORT_MENU_LOOKUP:
+            return common.BUDGET_REPORT_MENU_LOOKUP[budget_opt_input]
         else:
             print("Invalid option. Please try again.")
 
@@ -115,9 +114,9 @@ def report_details_prompt(report_opt):
     """
 
     if report_opt == "clickview":
-        report_date_details = helpers.get_timerange(force_single=True)
+        report_date_details = common.get_timerange(force_single=True)
     else:
-        report_date_details = helpers.get_timerange(force_single=False)
+        report_date_details = common.get_timerange(force_single=False)
     date_opt, start_date, end_date, time_seg = report_date_details
     account_scope = account_scope_prompt()  # returns 'single' or 'all'
     report_details = (date_opt, start_date, end_date, time_seg, account_scope)
@@ -129,8 +128,8 @@ def execution_time(start_time, end_time):
     """Display the elapsed time for a report.
 
     Args:
-        start_time (float): Start timestamp from ``time.time``.
-        end_time (float): End timestamp from ``time.time``.
+        start_time (float): Start timestamp from 'time.time'.
+        end_time (float): End timestamp from 'time.time'.
 
     Returns:
         None: Output is written directly to stdout.
@@ -151,8 +150,8 @@ def data_review(report_details, *, debug=False, **toggles):
             flags selected by the user.
 
     Returns:
-        None: The function only prints debugging information when ``debug`` is
-        ``True``.
+        None: The function only prints debugging information when 'debug' is
+        'True'.
     """
 
     if not debug:
@@ -192,9 +191,7 @@ def output_prompt():
             "2. Display table on screen\n"
             "3. Auto-display results without additional prompts\n"
         )
-        selection = input(
-            "Choose a numbered option (1-3 or 'exit' to exit): "
-        ).strip()
+        selection = input("Choose a numbered option (1-3 or 'exit' to exit): ").strip()
         choice = output_options.get(selection)
         if choice:
             return choice

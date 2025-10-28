@@ -21,7 +21,7 @@ Google Ads Reporter is a command-line tool that authenticates against the Google
    - *OAuth client credentials*: create OAuth client ID and client secret, then generate a refresh token for the Google Ads manager account.
    - *Service account credentials*: create a service account, delegate access to the Google Ads manager account, and download the JSON key file.
 3. **Prepare the configuration file.**
-   - Copy `google-ads-template.yaml` from this repository.
+   - Open or Copy `google-ads-template.yaml` from this repository.
    - Fill in your developer token, login customer ID (manager account), and the credential values that correspond to your chosen auth method.
    - Reference any JSON key file paths exactly as they exist on your machine.
 4. **Save the file as `google-ads.yaml`.** Place it next to `main.py`, or provide a full path at runtime.

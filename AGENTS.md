@@ -21,6 +21,29 @@ All AI agents must also follow the [CONTRIBUTING.md](CONTRIBUTING.md) guidelines
 - Follow PEP8 formatting.
 - Commit messages should be in imperative mood (e.g., "Add helper function", not "Added helper function").
 
+### Styling Guidelines
+
+#### Quoting and String Handling
+- **Never** use backticks (\`) to wrap strings or comments in Python code.  
+- Strings must always use **single quotes `'`** or **double quotes `"`**, depending on project style.  
+  - Examples:  
+    - `message = "Hello World"` → approved  
+    - `message = 'Hello World'` → approved  
+    - ``message = `Hello World``` → not approved  
+- Backticks are only allowed when required for **Markdown formatting** (e.g., in README.md, documentation, or docstrings showing inline code).  
+- Comments must also avoid backticks unless referencing inline code in Markdown.  
+- This rule **extends PEP8**: backticks are treated as **invalid syntax** for any runtime string in Python.  
+- **Enforcement:** Pull requests containing backticks in Python code (outside of Markdown/docstrings) will be rejected.  
+
+#### Additional Styling and Character Regulations
+- **Dashes:** Do not use em dashes (`—`).  
+  - Use a standard single dash with whitespace as a conjoiner: `" - "`.  
+  - Example: `"Option A - Option B"` (approved) vs `"Option A—Option B"` (not approved)  
+
+- **Arrows:** Do not use Unicode arrows like (`→`) in code, strings, or descriptions.  
+  - Use ASCII arrows with whitespace conjoiners: `" > "` for single steps, `" --> "` for mappings.  
+  - Example: `"A --> B"` (approved) vs `"A → B"` (not approved)  
+
 ### Testing
 - Run `pytest` before submitting PRs.
 - No failing tests or lint errors allowed.

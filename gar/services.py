@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Google Ads API service utilities and report execution helpers."""
+"""Google Ads API service utilities and report execution common."""
 
 import os
 import sys
@@ -15,8 +15,7 @@ from google.api_core.exceptions import (
     Unauthenticated,
 )
 
-import helpers
-import queries
+from gar import common, queries
 
 
 def generate_services(yaml_loc=None):
@@ -24,7 +23,7 @@ def generate_services(yaml_loc=None):
 
     Args:
         yaml_loc (str | None): Optional path to the Google Ads configuration
-            file. When ``None`` the default ``google-ads.yaml`` adjacent to the
+            file. When 'None' the default 'google-ads.yaml' adjacent to the
             module is used.
 
     Returns:
@@ -43,10 +42,17 @@ def generate_services(yaml_loc=None):
     # check if yaml file exists
     if not os.path.exists(yaml_loc):
         print(
-            "The authorization process is incomplete...\n"
-            f"ERROR: {yaml_loc} not found. Please check the file path."
+            f"The authorization process is incomplete...\nERROR: {yaml_loc} not found."
         )
-        sys.exit(1)
+        yaml_loc = input("Please enter the full path to your google-ads.yaml: ").strip()
+        if not os.path.exists(yaml_loc):
+            print(
+                f"YAML file not found at indicated location: {yaml_loc}\n"
+                "Please refer to the 'Authentication Workflow' section in the README file \n"
+                "for instructions on obtaining and using the 'google-ads-template.yaml' at:\n"
+                " --> https://developers.google.com/google-ads/api/docs/get-started/oauth-cloud-project "
+            )
+            sys.exit(1)
     else:
         print(f"Using YAML file: {yaml_loc}\n")
     try:
@@ -385,9 +391,9 @@ def arc_report_single(
     Args:
         gads_service (GoogleAdsService): Service used to execute GAQL queries.
         client (GoogleAdsClient): Authenticated API client for enum decoding.
-        start_date (str): Inclusive start date (``YYYY-MM-DD``).
-        end_date (str): Inclusive end date (``YYYY-MM-DD``).
-        time_seg (str): Time segmentation key (for example ``"date"``).
+        start_date (str): Inclusive start date ('YYYY-MM-DD').
+        end_date (str): Inclusive end date ('YYYY-MM-DD').
+        time_seg (str): Time segmentation key (for example '"date"').
         customer_id (str): Customer ID for the target account.
         **kwargs: Optional toggles controlling channel, campaign, and ad group
             inclusion.
@@ -414,7 +420,7 @@ def arc_report_single(
     # fetch data and populate list
     for batch in arc_query_response:
         for row in batch.results:
-            arc = helpers.extract_arc(row.campaign.name)
+            arc = common.extract_arc(row.campaign.name)
             channel_type = (
                 channel_type_enum.AdvertisingChannelType.Name(
                     row.campaign.advertising_channel_type
@@ -423,7 +429,7 @@ def arc_report_single(
                 else "UNDEFINED"
             )
             date_value = getattr(row.segments, time_seg)
-            cost_value = helpers.micros_to_decimal(
+            cost_value = common.micros_to_decimal(
                 row.metrics.cost_micros, Decimal("0.01")
             )
             # build dict, primary dims/metrics first
@@ -483,9 +489,9 @@ def arc_report_all(
     Args:
         gads_service (GoogleAdsService): Service used to execute GAQL queries.
         client (GoogleAdsClient): Authenticated API client.
-        start_date (str): Inclusive start date (``YYYY-MM-DD``).
-        end_date (str): Inclusive end date (``YYYY-MM-DD``).
-        time_seg (str): Time segmentation key (for example ``"date"``).
+        start_date (str): Inclusive start date ('YYYY-MM-DD').
+        end_date (str): Inclusive end date ('YYYY-MM-DD').
+        time_seg (str): Time segmentation key (for example '"date"').
         accounts_info (dict[str, str]): Mapping of customer IDs to names.
         **kwargs: Optional toggles controlling channel, campaign, and ad group
             inclusion.
@@ -535,8 +541,8 @@ def account_report_single(
     Args:
         gads_service (GoogleAdsService): Service used for GAQL queries.
         client (GoogleAdsClient): Authenticated API client.
-        start_date (str): Inclusive start date (``YYYY-MM-DD``).
-        end_date (str): Inclusive end date (``YYYY-MM-DD``).
+        start_date (str): Inclusive start date ('YYYY-MM-DD').
+        end_date (str): Inclusive end date ('YYYY-MM-DD').
         time_seg (str): Time segmentation key.
         customer_id (str): Target customer ID.
         **kwargs: Reserved for future report toggle options.
@@ -573,7 +579,7 @@ def account_report_single(
                 "date": date_value,
                 "account": row.customer.descriptive_name,
                 "customer id": row.customer.id,
-                "cost": helpers.micros_to_decimal(
+                "cost": common.micros_to_decimal(
                     row.metrics.cost_micros, Decimal("0.01")
                 ),
                 "clicks": clicks,
@@ -582,10 +588,10 @@ def account_report_single(
                 "interactions": row.metrics.interactions,
                 "impressions": row.metrics.impressions,
                 "ctr": row.metrics.ctr,
-                "avg cpc": helpers.micros_to_decimal(
+                "avg cpc": common.micros_to_decimal(
                     row.metrics.average_cpc, Decimal("0.001")
                 ),
-                "avg cpm": helpers.micros_to_decimal(
+                "avg cpm": common.micros_to_decimal(
                     row.metrics.average_cpm, Decimal("0.001")
                 ),
                 "abs top is": row.metrics.absolute_top_impression_percentage,
@@ -625,8 +631,8 @@ def account_report_all(
     Args:
         gads_service (GoogleAdsService): Service used for GAQL queries.
         client (GoogleAdsClient): Authenticated API client.
-        start_date (str): Inclusive start date (``YYYY-MM-DD``).
-        end_date (str): Inclusive end date (``YYYY-MM-DD``).
+        start_date (str): Inclusive start date ('YYYY-MM-DD').
+        end_date (str): Inclusive end date ('YYYY-MM-DD').
         time_seg (str): Time segmentation key.
         accounts_info (dict[str, str]): Mapping of customer IDs to account
             names.
@@ -670,8 +676,8 @@ def ad_level_report_single(
     Args:
         gads_service (GoogleAdsService): Service used to execute GAQL queries.
         client (GoogleAdsClient): Authenticated API client for enum decoding.
-        start_date (str): Inclusive start date (``YYYY-MM-DD``).
-        end_date (str): Inclusive end date (``YYYY-MM-DD``).
+        start_date (str): Inclusive start date ('YYYY-MM-DD').
+        end_date (str): Inclusive end date ('YYYY-MM-DD').
         time_seg (str): Time segmentation key.
         customer_id (str): Target customer ID.
         **kwargs: Toggle options that control inclusion of channel, campaign,
@@ -697,7 +703,7 @@ def ad_level_report_single(
     )
     for batch in ad_group_ad_response:
         for row in batch.results:
-            arc = helpers.extract_arc(row.campaign.name)
+            arc = common.extract_arc(row.campaign.name)
             channel_type = (
                 channel_type_enum.AdvertisingChannelType.Name(
                     row.campaign.advertising_channel_type
@@ -717,18 +723,18 @@ def ad_level_report_single(
             )
             date_value = getattr(row.segments, time_seg)
             # build dict struct
-            cost_value = helpers.micros_to_decimal(
+            cost_value = common.micros_to_decimal(
                 row.metrics.cost_micros, Decimal("0.01")
             )
             impressions = getattr(row.metrics, "impressions", 0) or 0
             avg_cpm_value = (
-                helpers.micros_to_decimal(row.metrics.average_cpm, Decimal("0.001"))
+                common.micros_to_decimal(row.metrics.average_cpm, Decimal("0.001"))
                 if impressions
                 else Decimal("0.000")
             )
             clicks = getattr(row.metrics, "clicks", 0) or 0
             avg_cpc_value = (
-                helpers.micros_to_decimal(row.metrics.average_cpc, Decimal("0.001"))
+                common.micros_to_decimal(row.metrics.average_cpc, Decimal("0.001"))
                 if clicks
                 else Decimal("0.000")
             )
@@ -775,7 +781,7 @@ def ad_level_report_single(
     for batch in pmax_campaign_response:
         for row in batch.results:
             # ENUM decoding with fallbacks
-            arc = helpers.extract_arc(row.campaign.name)
+            arc = common.extract_arc(row.campaign.name)
             channel_type = (
                 channel_type_enum.AdvertisingChannelType.Name(
                     row.campaign.advertising_channel_type
@@ -784,18 +790,18 @@ def ad_level_report_single(
                 else "UNDEFINED"
             )
             date_value = getattr(row.segments, time_seg)
-            cost_value = helpers.micros_to_decimal(
+            cost_value = common.micros_to_decimal(
                 row.metrics.cost_micros, Decimal("0.01")
             )
             impressions = getattr(row.metrics, "impressions", 0) or 0
             avg_cpm_value = (
-                helpers.micros_to_decimal(row.metrics.average_cpm, Decimal("0.001"))
+                common.micros_to_decimal(row.metrics.average_cpm, Decimal("0.001"))
                 if impressions
                 else Decimal("0.000")
             )
             clicks = getattr(row.metrics, "clicks", 0) or 0
             avg_cpc_value = (
-                helpers.micros_to_decimal(row.metrics.average_cpc, Decimal("0.001"))
+                common.micros_to_decimal(row.metrics.average_cpc, Decimal("0.001"))
                 if clicks
                 else Decimal("0.000")
             )
@@ -968,8 +974,8 @@ def ad_level_report_all(
     Args:
         gads_service (GoogleAdsService): Service used to execute GAQL queries.
         client (GoogleAdsClient): Authenticated API client.
-        start_date (str): Inclusive start date (``YYYY-MM-DD``).
-        end_date (str): Inclusive end date (``YYYY-MM-DD``).
+        start_date (str): Inclusive start date ('YYYY-MM-DD').
+        end_date (str): Inclusive end date ('YYYY-MM-DD').
         time_seg (str): Time segmentation key.
         accounts_info (dict[str, str]): Mapping of customer IDs to account
             names.
@@ -1020,8 +1026,8 @@ def click_view_report_single(
     Args:
         gads_service (GoogleAdsService): Service used to execute GAQL queries.
         client (GoogleAdsClient): Authenticated API client.
-        start_date (str): Inclusive start date (``YYYY-MM-DD``).
-        end_date (str): Inclusive end date (``YYYY-MM-DD``).
+        start_date (str): Inclusive start date ('YYYY-MM-DD').
+        end_date (str): Inclusive end date ('YYYY-MM-DD').
         time_seg (str): Time segmentation key.
         customer_id (str): Target customer ID.
         **kwargs: Toggle options that control inclusion of channel, campaign,
@@ -1156,8 +1162,8 @@ def click_view_report_all(
     Args:
         gads_service (GoogleAdsService): Service used to execute GAQL queries.
         client (GoogleAdsClient): Authenticated API client.
-        start_date (str): Inclusive start date (``YYYY-MM-DD``).
-        end_date (str): Inclusive end date (``YYYY-MM-DD``).
+        start_date (str): Inclusive start date ('YYYY-MM-DD').
+        end_date (str): Inclusive end date ('YYYY-MM-DD').
         time_seg (str): Time segmentation key.
         accounts_info (dict[str, str]): Mapping of customer IDs to account
             names.
@@ -1207,8 +1213,8 @@ def paid_org_search_term_report_single(
     Args:
         gads_service (GoogleAdsService): Service used to execute GAQL queries.
         client (GoogleAdsClient): Authenticated API client.
-        start_date (str): Inclusive start date (``YYYY-MM-DD``).
-        end_date (str): Inclusive end date (``YYYY-MM-DD``).
+        start_date (str): Inclusive start date ('YYYY-MM-DD').
+        end_date (str): Inclusive end date ('YYYY-MM-DD').
         time_seg (str): Time segmentation key.
         customer_id (str): Target customer ID.
 
@@ -1293,7 +1299,7 @@ def paid_org_search_term_report_single(
             avg_cpc_micros = getattr(row.metrics, "average_cpc", 0) or 0
             total_impressions = organic_impressions + paid_impressions
             avg_cpc_value = (
-                helpers.micros_to_decimal(avg_cpc_micros, Decimal("0.001"))
+                common.micros_to_decimal(avg_cpc_micros, Decimal("0.001"))
                 if paid_clicks
                 else Decimal("0.000")
             )
@@ -1469,8 +1475,8 @@ def paid_org_search_term_report_all(
     Args:
         gads_service (GoogleAdsService): Service used to execute GAQL queries.
         client (GoogleAdsClient): Authenticated API client.
-        start_date (str): Inclusive start date (``YYYY-MM-DD``).
-        end_date (str): Inclusive end date (``YYYY-MM-DD``).
+        start_date (str): Inclusive start date ('YYYY-MM-DD').
+        end_date (str): Inclusive end date ('YYYY-MM-DD').
         time_seg (str): Time segmentation key.
         accounts_info (dict[str, str]): Mapping of customer IDs to account
             names.
@@ -1528,8 +1534,8 @@ def budget_report_single(
     Args:
         gads_service (GoogleAdsService): Service used for GAQL queries.
         client (GoogleAdsClient): Authenticated API client.
-        start_date (str): Inclusive start date (``YYYY-MM-DD``).
-        end_date (str): Inclusive end date (``YYYY-MM-DD``).
+        start_date (str): Inclusive start date ('YYYY-MM-DD').
+        end_date (str): Inclusive end date ('YYYY-MM-DD').
         time_seg (str): Time segmentation key.
         customer_id (str): Target customer ID.
 
@@ -1548,8 +1554,8 @@ def budget_report_all(
     Args:
         gads_service (GoogleAdsService): Service used for GAQL queries.
         client (GoogleAdsClient): Authenticated API client.
-        start_date (str): Inclusive start date (``YYYY-MM-DD``).
-        end_date (str): Inclusive end date (``YYYY-MM-DD``).
+        start_date (str): Inclusive start date ('YYYY-MM-DD').
+        end_date (str): Inclusive end date ('YYYY-MM-DD').
         time_seg (str): Time segmentation key.
         accounts_info (dict[str, str]): Mapping of customer IDs to account
             names.
@@ -1559,12 +1565,3 @@ def budget_report_all(
     """
 
     print("Budget report - all, test complete!")
-
-
-# Prototyping/testing
-
-
-def test_query(gads_service, client, customer_id):
-    """Placeholder function for exploratory GAQL queries."""
-
-    return None

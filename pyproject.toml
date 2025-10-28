@@ -1,3 +1,34 @@
+[project]
+name = "gar"
+version = "0.1.0"
+description = "Google Ads Reporter prototype"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "aiohttp",
+    "click",
+    "google-ads",
+    "pyyaml",
+    "requests",
+    "tabulate",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+[project.scripts]
+gar = "gar.main:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["gar"]
+
 [tool.ruff]
 line-length = 88
 target-version = "py311"
@@ -7,7 +38,7 @@ select = ["E", "F", "I"]      # pycodestyle, pyflakes, import sorting
 ignore = ["E501"]             # line length handled by formatter
 
 [tool.ruff.lint.isort]
-known-first-party = ["gar_proto"]  # replace with your actual package/module name
+known-first-party = ["gar"]
 combine-as-imports = true
 
 [tool.ruff.format]
@@ -15,4 +46,6 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.pytest.ini_options]
+testpaths = ["tests"]
 python_files = ["test_*.py"]
+pythonpath = ["."]

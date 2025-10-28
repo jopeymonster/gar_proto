@@ -14,10 +14,10 @@ def build_query(
     """Construct a GAQL query with basic filtering and ordering.
 
     Args:
-        resource (str): GAQL resource name (for example ``"campaign"``).
+        resource (str): GAQL resource name (for example 'campaign').
         select_fields (list[str]): Field selection for the query.
-        start_date (str): Inclusive start date (``YYYY-MM-DD``).
-        end_date (str): Inclusive end date (``YYYY-MM-DD``).
+        start_date (str): Inclusive start date ('YYYY-MM-DD').
+        end_date (str): Inclusive end date ('YYYY-MM-DD').
         where_clauses (list[str] | None): Additional predicates for the WHERE
             clause.
         order_by (list[str] | None): Optional ordering instructions.
