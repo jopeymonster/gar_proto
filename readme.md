@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/logo.png" alt="Google Ads Reporter Logo" width="400"/>
+</p>
+
 # Google Ads Reporter
 
 Google Ads Reporter is a command-line package that authenticates against the Google Ads API, executes curated GAQL queries, and presents the results in both **interactive console mode** and **direct CLI mode**.
@@ -12,6 +16,112 @@ Google Ads Reporter is a command-line package that authenticates against the Goo
 * CLI arguments for automation (headless mode).
 * Supports both **OAuth** and **Service Account** authentication.
 * CSV/JSON export modes available.
+
+---
+
+## Report Types
+
+The reporter supports multiple reporting scopes, each with its own options:
+
+- **Performance Reports**  
+  Break down campaign, ad group, and ad-level metrics. Supports toggles such as devices, channels, and campaign info.  
+
+- **Audit Reports**  
+  Provide diagnostic views of labels, campaign groups, and label assignments to help validate account hygiene and consistency.  
+
+- **Budget Reports**  
+  Summarize spend, pacing, and related KPIs across single or multiple accounts.
+
+  
+### Performance
+
+- **ARC (Ad Response Code)**  
+  A custom extension for deeper analysis.  
+  - Embed a custom identifier in your campaign naming convention:  
+    ```
+    Campaign Name :ad_response_code
+    ```
+    Examples:
+    - `Nike Shoes - Holiday Sales :nikeholidaysales`
+    - `Chicago - Legal - FRG :chi_frg_legal`
+    - `GoogleAdsCampaign: MyCampaign :my_ad_response_code`
+  - Uses:
+    - Audit UTM parameters against campaigns.  
+    - Link Ads activity with ERP or CRM systems.  
+    - Add a flexible reporting dimension for cross-channel analysis.  
+  - If no `:ad_response_code` is present, the report will return `None`/blank.
+
+---
+
+- **Account**  
+  High-level KPIs at the account level. Useful for executive summaries or quick health checks across accounts without drilling into campaign details.  
+
+---
+
+- **Ads**  
+  Campaign, ad group, and ad-level performance reporting.  
+  - Standard metrics: impressions, clicks, conversions, costs.  
+  - Dimensions: device breakdowns, channel type, campaign metadata.  
+  - Includes ARC values where available.  
+
+---
+
+- **GLCID / Click View**  
+  Exposes **click-level data** tied to Google Click Identifiers (GCLID).  
+  - Shows both valid and invalid clicks.  
+  - **Limitations**:  
+    - Must query a **single day**.  
+    - Only available for data within the **last 90 days**.  
+  - Use cases: validating click-level tracking, fraud auditing, and attribution analysis.  
+
+---
+
+- **Paid & Organic Search Terms (POSTV)**  
+  Combines paid ads + organic results at the query level.  
+  - Aggregated at **ad group scope**.  
+  - Available metrics include:  
+    - Paid CPC, organic clicks, combined impressions, query frequency.  
+  - Ideal for identifying **keyword gaps** or measuring **incremental lift** when ads + organic overlap.  
+
+---
+
+### Auditing
+
+- **Account Labels**  
+  Fetches all labels assigned to the account for review.  
+  - Does not return any associating campaigns, ad groups, or ads.  
+  - Use cases: verifying naming conventions and label hygiene.  
+
+---
+
+- **Campaign Groups**  
+  Returns the account's current campaign groups by name and ID.
+  - Does not return any associating campaigns, ad groups, or ads.  
+  - Use cases: confirming campaign group assignments, validating group-level strategy.  
+
+---
+
+- **Campaign and Ad Group Label Audit**  
+  Obtains all campaign group and label designations for campaign and ad group scopes.  
+  - Includes campaign/ad group details and applied labels.  
+  - Use cases: checking compliance with internal naming/labeling standards, surfacing unlabeled assets.  
+
+---
+
+### Budgeting
+
+- **Budget Overview**  
+  Summarizes monthly budgets, current spend, and pacing.  
+  - View across one or multiple accounts.  
+  - Use cases: monitoring over/under-spend, pacing against plan, budget caps.  
+
+---
+
+- **Under Construction**  
+  Future enhancements may include:  
+  - Forecasting based on historical spend + seasonality.  
+  - Budget vs performance efficiency scoring.  
+  - Alerts for anomalies or pacing concerns.  
 
 ---
 
@@ -128,7 +238,7 @@ Run `python -m gar --help` for the full argument list.
 2. **Workflow**
 
    * Work from feature branches (`f01.2`, etc.).
-   * Submit PRs → `develop` → `main`.
+   * Submit PRs > `develop` > `main`.
    * `main` and `develop` are protected (no direct pushes).
 
 3. **Before committing**

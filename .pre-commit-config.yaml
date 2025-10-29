@@ -1,4 +1,5 @@
 repos:
+  # formatting
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.5.7
     hooks:
@@ -6,16 +7,16 @@ repos:
         args: [--fix]
       - id: ruff-format
 
-  # Emoji check (already working)
+  # Emoji check
   - repo: local
     hooks:
       - id: no-emoji
         name: No Emoji
-        entry: bash -c "if git grep -qP '[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{2600}-\x{26FF}]'; then echo 'Emoji detected in codebase. Please remove all emojis.'; exit 1; fi"
+        entry: bash -c 'if [ "$#" -gt 0 ] && grep -n -E "[\x{2013}\x{2014}\x{2018}\x{2019}\x{201C}\x{201D}\x{2600}-\x{26FF}\x{1F300}-\x{1FAFF}]" -- "$@"; then echo "Emoji or disallowed characters found! Please remove them."; exit 1; fi'
         language: system
         types: [text]
 
-  # Run pytest only on push
+  # pytest
   - repo: local
     hooks:
       - id: pytest
