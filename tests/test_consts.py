@@ -38,7 +38,7 @@ def test_performance_toggle_config_structure():
     expected_reports = {
         "include_channel_types": {
             "attr": "include_channel_type",
-            "reports": {"arc", "ads", "clickview", "paid_organic_terms"},
+            "reports": {"mac", "ads", "clickview", "paid_organic_terms"},
             "prompt": common.include_channel_types,
             "label": "channel type segmentation",
             "cli_option": "--channel-types",
@@ -46,7 +46,7 @@ def test_performance_toggle_config_structure():
         },
         "include_campaign_info": {
             "attr": "include_campaign_info",
-            "reports": {"arc", "ads", "clickview", "paid_organic_terms"},
+            "reports": {"mac", "ads", "clickview", "paid_organic_terms"},
             "prompt": common.include_campaign_info,
             "label": "campaign metadata",
             "cli_option": "--campaign-info",

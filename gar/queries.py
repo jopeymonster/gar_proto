@@ -107,9 +107,9 @@ def label_audit_query():
     """
 
 
-# arc
-def arc_report_query(start_date, end_date, time_seg_string, **kwargs):
-    """Return a GAQL query for the ARC performance report."""
+# mac
+def mac_report_query(start_date, end_date, time_seg_string, **kwargs):
+    """Return a GAQL query for the MAC performance report."""
 
     select_fields = [
         time_seg_string,

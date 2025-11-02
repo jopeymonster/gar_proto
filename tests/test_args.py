@@ -47,15 +47,15 @@ def test_missing_yaml(monkeypatch, parser):
 # Report argument parsing
 # ------------------------------
 def test_report_with_scope_and_option(parser):
-    args = parser.parse_args(["--report", "performance:arc"])
+    args = parser.parse_args(["--report", "performance:mac"])
     args = normalize_cli_args(parser, args)
     assert args.report_scope == "performance"
-    assert args.report_option == "arc"
+    assert args.report_option == "mac"
 
 
 def test_conflicting_report_options(parser):
     args = parser.parse_args(
-        ["--report", "performance:arc", "--report-option", "account"]
+        ["--report", "performance:mac", "--report-option", "account"]
     )
     with pytest.raises(ValueError):
         normalize_cli_args(parser, args)
@@ -89,7 +89,7 @@ def test_invalid_account(parser):
 
 
 def test_account_all_scope(parser):
-    args = parser.parse_args(["--report", "performance:arc", "--account", "all"])
+    args = parser.parse_args(["--report", "performance:mac", "--account", "all"])
     normalized = normalize_cli_args(parser, args)
     assert normalized.account_scope_cli == "all"
     assert normalized.account_id_cli is None

@@ -10,7 +10,6 @@ import requests
 from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
 from google.api_core.exceptions import (
-    ResourceExhausted,
     TooManyRequests,
     Unauthenticated,
 )
@@ -240,11 +239,6 @@ def handle_exceptions(func):
                 "Too many requests. API quota may have been reached or accessed too quickly. Please try again later."
             )
             print_error(func.__name__, e)
-        except ResourceExhausted as e:
-            print(
-                "Resource exhausted. API quota may have been reached or accessed too quickly. Please try again later."
-            )
-            print_error(func.__name__, e)
         # generic requests exceptions
         except requests.exceptions.RequestException as e:
             print_error(func.__name__, e)
@@ -259,8 +253,6 @@ def handle_exceptions(func):
         except TypeError as e:
             print_error(func.__name__, e)
         except ValueError as e:
-            print_error(func.__name__, e)
-        except FileNotFoundError as e:
             print_error(func.__name__, e)
         except AttributeError as e:
             print_error(func.__name__, e)
@@ -383,10 +375,10 @@ PERFORMANCE REPORTS
 """
 
 
-def arc_report_single(
+def mac_report_single(
     gads_service, client, start_date, end_date, time_seg, customer_id, **kwargs
 ):
-    """Generate the Ad Response Codes report for a single account.
+    """Generate the Marketing Attribution Codes report for a single account.
 
     Args:
         gads_service (GoogleAdsService): Service used to execute GAQL queries.
@@ -409,18 +401,18 @@ def arc_report_single(
     include_channel_types = kwargs.get("include_channel_types", False)
     include_campaign_info = kwargs.get("include_campaign_info", False)
     # GAQL query
-    arc_report_query = queries.arc_report_query(
+    mac_report_query = queries.mac_report_query(
         start_date, end_date, time_seg_string, **kwargs
     )
-    arc_query_response = gads_service.search_stream(
-        customer_id=customer_id, query=arc_report_query
+    mac_query_response = gads_service.search_stream(
+        customer_id=customer_id, query=mac_report_query
     )
     # initialize empty list
     table_data = []
     # fetch data and populate list
-    for batch in arc_query_response:
+    for batch in mac_query_response:
         for row in batch.results:
-            arc = common.extract_arc(row.campaign.name)
+            mac = common.extract_mac(row.campaign.name)
             channel_type = (
                 channel_type_enum.AdvertisingChannelType.Name(
                     row.campaign.advertising_channel_type
@@ -433,36 +425,36 @@ def arc_report_single(
                 row.metrics.cost_micros, Decimal("0.01")
             )
             # build dict, primary dims/metrics first
-            arc_dict = {
+            mac_dict = {
                 "Date": date_value,
                 "Account name": row.customer.descriptive_name,
                 "Customer ID": row.customer.id,
-                "ARC": arc,
+                "MAC": mac,
                 "Cost": cost_value,
             }
             # append campaign info if selected
             if include_campaign_info:
-                arc_dict["Campaign"] = row.campaign.name
+                mac_dict["Campaign"] = row.campaign.name
             # append channel types if selected
             if include_channel_types:
-                arc_dict["Campaign type"] = channel_type
+                mac_dict["Campaign type"] = channel_type
 
             # append dict
-            table_data.append(arc_dict)
+            table_data.append(mac_dict)
     # define headers
     headers = ["Date", "Account name", "Customer ID"]  # primary dimensions
     if include_campaign_info:
         headers.append("Campaign")
     if include_channel_types:
         headers.append("Campaign type")
-    headers += ["ARC", "Cost"]  # primary metrics
+    headers += ["MAC", "Cost"]  # primary metrics
     # aggregate if campaign info is not included
     if not include_campaign_info:
         # determine grouping keys
         if include_channel_types:
-            group_keys = ["Date", "Account name", "Customer ID", "Campaign type", "ARC"]
+            group_keys = ["Date", "Account name", "Customer ID", "Campaign type", "MAC"]
         else:
-            group_keys = ["Date", "Account name", "Customer ID", "ARC"]
+            group_keys = ["Date", "Account name", "Customer ID", "MAC"]
         # Aggregate by key
         aggregated = defaultdict(
             lambda: Decimal("0.00")
@@ -481,10 +473,10 @@ def arc_report_single(
     return filtered_data, headers
 
 
-def arc_report_all(
+def mac_report_all(
     gads_service, client, start_date, end_date, time_seg, accounts_info, **kwargs
 ):
-    """Generate the Ad Response Codes report for multiple accounts.
+    """Generate the Marketing Attribution Codes report for multiple accounts.
 
     Args:
         gads_service (GoogleAdsService): Service used to execute GAQL queries.
@@ -506,7 +498,7 @@ def arc_report_all(
     for customer_id, account_descriptive in accounts_info.items():
         print(f"Processing {account_descriptive}...")
         try:
-            table_data, headers = arc_report_single(
+            table_data, headers = mac_report_single(
                 gads_service,
                 client,
                 start_date,
@@ -703,7 +695,7 @@ def ad_level_report_single(
     )
     for batch in ad_group_ad_response:
         for row in batch.results:
-            arc = common.extract_arc(row.campaign.name)
+            mac = common.extract_mac(row.campaign.name)
             channel_type = (
                 channel_type_enum.AdvertisingChannelType.Name(
                     row.campaign.advertising_channel_type
@@ -749,7 +741,7 @@ def ad_level_report_single(
                 "Date": date_value,
                 "Customer ID": row.customer.id,
                 "Account name": row.customer.descriptive_name,
-                "ARC": arc,
+                "MAC": mac,
                 "Campaign ID": row.campaign.id,
                 "Campaign name": row.campaign.name,
                 "Campaign type": channel_type,
@@ -781,7 +773,7 @@ def ad_level_report_single(
     for batch in pmax_campaign_response:
         for row in batch.results:
             # ENUM decoding with fallbacks
-            arc = common.extract_arc(row.campaign.name)
+            mac = common.extract_mac(row.campaign.name)
             channel_type = (
                 channel_type_enum.AdvertisingChannelType.Name(
                     row.campaign.advertising_channel_type
@@ -816,7 +808,7 @@ def ad_level_report_single(
                 "Date": date_value,
                 "Customer ID": row.customer.id,
                 "Account name": row.customer.descriptive_name,
-                "ARC": arc,
+                "MAC": mac,
                 "Campaign ID": row.campaign.id,
                 "Campaign name": row.campaign.name,
                 "Campaign type": channel_type,
@@ -838,7 +830,7 @@ def ad_level_report_single(
                 "Conv. value": conv_value_metric,
             }
             table_data.append(pmax_dict)
-    headers = ["Date", "Customer ID", "Account name", "ARC"]  # primary dimensions
+    headers = ["Date", "Customer ID", "Account name", "MAC"]  # primary dimensions
     if include_campaign_info:
         headers += ["Campaign ID", "Campaign name"]
     if include_channel_types:

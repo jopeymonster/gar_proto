@@ -47,7 +47,7 @@ else:
 # -----------------------------
 
 PERFORMANCE_REPORT_OPTIONS = {
-    "arc",
+    "mac",
     "account",
     "ads",
     "clickview",
@@ -91,7 +91,7 @@ REPORT_SCOPE_MENU_LOOKUP = {
 }
 
 REPORT_OPTION_ALIASES = {
-    "arc": ("performance", "arc"),
+    "mac": ("performance", "mac"),
     "account": ("performance", "account"),
     "accounts": ("performance", "account"),
     "ads": ("performance", "ads"),
@@ -113,7 +113,7 @@ REPORT_OPTION_ALIASES = {
 }
 
 PERFORMANCE_REPORT_MENU_OPTIONS = (
-    ("1", "ARC Report", "arc"),
+    ("1", "MAC Report", "mac"),
     ("2", "Account Report", "account"),
     ("3", "Ads Report", "ads"),
     ("4", "GCLID/ClickView Report", "clickview"),
@@ -339,12 +339,12 @@ def data_handling_options(
 # -----------------------------
 
 
-def extract_arc(campaign_name: Optional[str]) -> str:
-    """Extract ARC (suffix after the final colon) from a campaign name."""
+def extract_mac(campaign_name: Optional[str]) -> str:
+    """Extract MAC (suffix after the final colon) from a campaign name."""
     if not campaign_name or ":" not in campaign_name:
         return "UNDEFINED"
-    arc = campaign_name.rsplit(":", 1)[-1].strip()
-    return arc if arc else "UNDEFINED"
+    mac = campaign_name.rsplit(":", 1)[-1].strip()
+    return mac if mac else "UNDEFINED"
 
 
 # -----------------------------
@@ -435,7 +435,7 @@ def include_device_info() -> bool:
 PERFORMANCE_TOGGLE_CONFIG = {
     "include_channel_types": {
         "attr": "include_channel_type",
-        "reports": {"arc", "ads", "clickview", "paid_organic_terms"},
+        "reports": {"mac", "ads", "clickview", "paid_organic_terms"},
         "prompt": include_channel_types,
         "label": "channel type segmentation",
         "cli_option": "--channel-types",
@@ -443,7 +443,7 @@ PERFORMANCE_TOGGLE_CONFIG = {
     },
     "include_campaign_info": {
         "attr": "include_campaign_info",
-        "reports": {"arc", "ads", "clickview", "paid_organic_terms"},
+        "reports": {"mac", "ads", "clickview", "paid_organic_terms"},
         "prompt": include_campaign_info,
         "label": "campaign metadata",
         "cli_option": "--campaign-info",
