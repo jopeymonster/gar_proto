@@ -35,21 +35,21 @@ The reporter supports multiple reporting scopes, each with its own options:
   
 ### Performance
 
-- **ARC (Ad Response Code)**  
-  A custom extension for deeper analysis.  
-  - Embed a custom identifier in your campaign naming convention:  
+- **MAC (Marketing Attribution Code)**
+  A custom extension for deeper analysis.
+  - Embed a custom identifier in your campaign naming convention:
     ```
-    Campaign Name :ad_response_code
+    Campaign Name :marketing_attribution_code
     ```
     Examples:
     - `Nike Shoes - Holiday Sales :nikeholidaysales`
     - `Chicago - Legal - FRG :chi_frg_legal`
-    - `GoogleAdsCampaign: MyCampaign :my_ad_response_code`
+    - `GoogleAdsCampaign: MyCampaign :my_marketing_attribution_code`
   - Uses:
-    - Audit UTM parameters against campaigns.  
-    - Link Ads activity with ERP or CRM systems.  
-    - Add a flexible reporting dimension for cross-channel analysis.  
-  - If no `:ad_response_code` is present, the report will return `None`/blank.
+    - Audit UTM parameters against campaigns.
+    - Link Ads activity with ERP or CRM systems.
+    - Add a flexible reporting dimension for cross-channel analysis.
+  - If no `:marketing_attribution_code` is present, the report will return `None`/blank.
 
 ---
 
@@ -58,11 +58,11 @@ The reporter supports multiple reporting scopes, each with its own options:
 
 ---
 
-- **Ads**  
-  Campaign, ad group, and ad-level performance reporting.  
-  - Standard metrics: impressions, clicks, conversions, costs.  
-  - Dimensions: device breakdowns, channel type, campaign metadata.  
-  - Includes ARC values where available.  
+- **Ads**
+  Campaign, ad group, and ad-level performance reporting.
+  - Standard metrics: impressions, clicks, conversions, costs.
+  - Dimensions: device breakdowns, channel type, campaign metadata.
+  - Includes MAC values where available.
 
 ---
 
@@ -200,7 +200,7 @@ python -m gar --report performance:ads --account single:1234567890 --output csv 
 * Report with report scope + option:
 
   ```bash
-  python -m gar --report performance:arc
+  python -m gar --report performance:mac
   ```
 * Account targeting:
 
