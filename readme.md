@@ -229,11 +229,11 @@ Run `python -m gar --help` for the full argument list.
 
 1. **Branching strategy**
 
-   * `codex`: agent-driven experiments
-   * `develop`: integration before `main`
    * `main`: stable, tagged releases
+   * `develop`: integration before `main`
    * `f01.x`: feature scratchpad branches
    * `issues`: critical bugfixes
+   * `codex`: agent-driven experiments
 
 2. **Workflow**
 

@@ -240,11 +240,6 @@ def handle_exceptions(func):
                 "Too many requests. API quota may have been reached or accessed too quickly. Please try again later."
             )
             print_error(func.__name__, e)
-        except ResourceExhausted as e:
-            print(
-                "Resource exhausted. API quota may have been reached or accessed too quickly. Please try again later."
-            )
-            print_error(func.__name__, e)
         # generic requests exceptions
         except requests.exceptions.RequestException as e:
             print_error(func.__name__, e)
@@ -259,8 +254,6 @@ def handle_exceptions(func):
         except TypeError as e:
             print_error(func.__name__, e)
         except ValueError as e:
-            print_error(func.__name__, e)
-        except FileNotFoundError as e:
             print_error(func.__name__, e)
         except AttributeError as e:
             print_error(func.__name__, e)
