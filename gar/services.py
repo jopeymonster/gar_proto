@@ -10,7 +10,6 @@ import requests
 from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
 from google.api_core.exceptions import (
-    ResourceExhausted,
     TooManyRequests,
     Unauthenticated,
 )

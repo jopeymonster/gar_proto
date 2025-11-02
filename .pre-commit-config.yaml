@@ -1,5 +1,6 @@
 repos:
-  # formatting
+  
+  # Ruff
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.5.7
     hooks:
@@ -7,14 +8,37 @@ repos:
         args: [--fix]
       - id: ruff-format
 
-  # Emoji check
+  # No Emoji
   - repo: local
     hooks:
       - id: no-emoji
         name: No Emoji
-        entry: bash -c 'if [ "$#" -gt 0 ] && grep -n -E "[\x{2013}\x{2014}\x{2018}\x{2019}\x{201C}\x{201D}\x{2600}-\x{26FF}\x{1F300}-\x{1FAFF}]" -- "$@"; then echo "Emoji or disallowed characters found! Please remove them."; exit 1; fi'
+        entry: python
         language: system
         types: [text]
+        args:
+          - "-c"
+          - |
+            import subprocess, sys, re
+
+            pattern = r"[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\u2600-\u26FF]"
+            out = subprocess.run(
+                ["git", "grep", "-nP", pattern],
+                capture_output=True,
+                text=True
+            )
+
+            if out.returncode == 0 and out.stdout.strip():
+                print("Emoji detected in the following locations:")
+                # Parse each match: "<file>:<line>:<text>"
+                for line in out.stdout.strip().splitlines():
+                    parts = line.split(":", 2)
+                    if len(parts) >= 2:
+                        file, lineno = parts[0], parts[1]
+                        print(f"  - {file}:{lineno}")
+                sys.exit(1)
+
+            sys.exit(0)
 
   # pytest
   - repo: local
