@@ -25,7 +25,7 @@ def build_parser():
         epilog=dedent(
             """
             Examples (can use 'gar' in place of 'main.py' if setup throug TOML config):
-              python main.py --report performance:arc --date last30 --output csv --account single:1234567890
+              python main.py --report performance:mac --date last30 --output csv --account single:1234567890
               python main.py --report performance:ads --channel-types include --ad-group include --date specific:2024-01-15
               python main.py --report audit --report-option account_labels --account all --debug
             """
@@ -45,7 +45,7 @@ def build_parser():
     parser.add_argument(
         "--report-option",
         dest="report_option_arg",
-        help="Explicit report option (e.g., arc, account, account_labels).",
+        help="Explicit report option (e.g., mac, account, account_labels).",
     )
     parser.add_argument(
         "--date",
@@ -286,14 +286,14 @@ def performance_menu(gads_service, client, full_accounts_info, cli_args):
     )
 
     single_dispatch = {
-        "arc": services.arc_report_single,
+        "mac": services.mac_report_single,
         "account": services.account_report_single,
         "ads": services.ad_level_report_single,
         "clickview": services.click_view_report_single,
         "paid_organic_terms": services.paid_org_search_term_report_single,
     }
     all_dispatch = {
-        "arc": services.arc_report_all,
+        "mac": services.mac_report_all,
         "account": services.account_report_all,
         "ads": services.ad_level_report_all,
         "clickview": services.click_view_report_all,
