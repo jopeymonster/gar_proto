@@ -849,6 +849,9 @@ def resolve_date_details(cli_args, *, force_single: bool):
         except ValueError as exc:
             print(f"Invalid --date argument: {exc}")
             sys.exit(1)
+        if date_details is None:
+            print("The --date argument did not resolve to a valid range.")
+            sys.exit(1)
     else:
         # lazy import to avoid cycle (prompts -> common -> prompts)
         from gar import (
@@ -856,6 +859,9 @@ def resolve_date_details(cli_args, *, force_single: bool):
         )
 
         date_details = get_timerange(force_single=force_single)
+    if date_details is None:
+        print("Failed to resolve a reporting date range.")
+        sys.exit(1)
     cli_args.date_details = date_details
     return date_details
 
@@ -896,15 +902,20 @@ def resolve_account_scope(cli_args, customer_dict: Dict[str, str]):
             return "all", None, None
         if scope == "single" and account_id:
             normalized_id = normalize_account_id(account_id)
-            account_name = customer_dict.get(normalized_id)
-            if account_name:
-                cli_args.account_scope = "single"
-                cli_args.account_id = normalized_id
-                cli_args.account_name = account_name
-                return "single", normalized_id, account_name
-            print(
-                f"Account ID {account_id} not found in accessible accounts. Prompting for selection."
-            )
+            if normalized_id is None:
+                print(
+                    f"Account ID {account_id} is not in a valid format. Prompting for selection."
+                )
+            else:
+                account_name = customer_dict.get(normalized_id)
+                if account_name:
+                    cli_args.account_scope = "single"
+                    cli_args.account_id = normalized_id
+                    cli_args.account_name = account_name
+                    return "single", normalized_id, account_name
+                print(
+                    f"Account ID {account_id} not found in accessible accounts. Prompting for selection."
+                )
         # fallthrough to prompts
 
     from gar import prompts as _prompts
