@@ -38,7 +38,7 @@ def test_performance_toggle_config_structure():
     expected_reports = {
         "include_channel_types": {
             "attr": "include_channel_type",
-            "reports": {"mac", "ads", "clickview", "paid_organic_terms"},
+            "reports": {"mac", "camptype", "ads", "clickview", "paid_organic_terms"},
             "prompt": common.include_channel_types,
             "label": "channel type segmentation",
             "cli_option": "--channel-types",
@@ -46,11 +46,19 @@ def test_performance_toggle_config_structure():
         },
         "include_campaign_info": {
             "attr": "include_campaign_info",
-            "reports": {"mac", "ads", "clickview", "paid_organic_terms"},
+            "reports": {"mac", "camptype", "ads", "clickview", "paid_organic_terms"},
             "prompt": common.include_campaign_info,
             "label": "campaign metadata",
             "cli_option": "--campaign-info",
             "default": False,
+        },
+        "include_mac": {
+            "attr": "include_mac",
+            "reports": {"mac", "camptype", "ads", "clickview", "paid_organic_terms"},
+            "prompt": common.include_mac_types,
+            "label": "marketing attribution codes",
+            "cli_option": "--mac",
+            "default": True,
         },
         "include_adgroup_info": {
             "attr": "include_adgroup_info",

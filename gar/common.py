@@ -47,6 +47,7 @@ else:
 # -----------------------------
 
 PERFORMANCE_REPORT_OPTIONS = {
+    "camptype",
     "mac",
     "account",
     "ads",
@@ -91,6 +92,8 @@ REPORT_SCOPE_MENU_LOOKUP = {
 }
 
 REPORT_OPTION_ALIASES = {
+    "camptype": ("performance", "camptype"),
+    "camp_type": ("performance", "camptype"),
     "mac": ("performance", "mac"),
     "account": ("performance", "account"),
     "accounts": ("performance", "account"),
@@ -113,11 +116,12 @@ REPORT_OPTION_ALIASES = {
 }
 
 PERFORMANCE_REPORT_MENU_OPTIONS = (
-    ("1", "MAC Report", "mac"),
+    ("1", "Campaign Type Report", "camptype"),
     ("2", "Account Report", "account"),
     ("3", "Ads Report", "ads"),
     ("4", "GCLID/ClickView Report", "clickview"),
     ("5", "Paid and Organic Search Terms Report", "paid_organic_terms"),
+    ("0", "MAC Report", "mac"),
 )
 
 PERFORMANCE_REPORT_MENU_LOOKUP = {
@@ -368,6 +372,21 @@ def aggregate_channels() -> bool:
         print("Invalid input, please select one of the indicated options (Y/N).")
 
 
+def include_mac_types() -> bool:
+    while True:
+        print(
+            "\nWould you like to include Marketing Attribution Codes (MAC) in the report? (Y)es or (N)o"
+        )
+        val = input("Please select Y or N: ").strip().lower()
+        if val in ("y", "yes"):
+            print("MAC values will be included in the report.")
+            return True
+        if val in ("n", "no"):
+            print("MAC values will NOT be included in the report.")
+            return False
+        print("Invalid input, please select one of the indicated options (Y/N).")
+
+
 def include_channel_types() -> bool:
     while True:
         print(
@@ -433,9 +452,17 @@ def include_device_info() -> bool:
 # -----------------------------
 
 PERFORMANCE_TOGGLE_CONFIG = {
+    "include_mac": {
+        "attr": "include_mac",
+        "reports": {"mac", "camptype", "ads", "clickview", "paid_organic_terms"},
+        "prompt": include_mac_types,
+        "label": "marketing attribution codes",
+        "cli_option": "--mac",
+        "default": True,
+    },
     "include_channel_types": {
         "attr": "include_channel_type",
-        "reports": {"mac", "ads", "clickview", "paid_organic_terms"},
+        "reports": {"mac", "camptype", "ads", "clickview", "paid_organic_terms"},
         "prompt": include_channel_types,
         "label": "channel type segmentation",
         "cli_option": "--channel-types",
@@ -443,7 +470,7 @@ PERFORMANCE_TOGGLE_CONFIG = {
     },
     "include_campaign_info": {
         "attr": "include_campaign_info",
-        "reports": {"mac", "ads", "clickview", "paid_organic_terms"},
+        "reports": {"mac", "camptype", "ads", "clickview", "paid_organic_terms"},
         "prompt": include_campaign_info,
         "label": "campaign metadata",
         "cli_option": "--campaign-info",
@@ -742,6 +769,7 @@ def determine_cli_mode(args) -> bool:
             args.include_campaign_info is not None,
             args.include_adgroup_info is not None,
             args.include_device_type is not None,
+            args.include_mac is not None,
         ]
     )
 
@@ -808,6 +836,7 @@ def resolve_performance_toggles(cli_args, report_option: str) -> Dict[str, bool]
     toggles: Dict[str, bool] = {}
     ignored_cli_arguments = []
     provided_fields = getattr(cli_args, "provided_toggle_fields", set())
+    forced_messages: list[str] = []
 
     for toggle_name, config in PERFORMANCE_TOGGLE_CONFIG.items():
         attr_name = config["attr"]
@@ -829,6 +858,26 @@ def resolve_performance_toggles(cli_args, report_option: str) -> Dict[str, bool]
             resolved_value = current_value
 
         toggles[toggle_name] = resolved_value
+
+    if report_option == "camptype":
+        if not toggles.get("include_channel_types", False):
+            forced_messages.append(
+                "Campaign Type report always includes channel type segmentation. "
+                "Proceeding with channel types enabled."
+            )
+        toggles["include_channel_types"] = True
+        cli_args.include_channel_type = True
+    if report_option == "mac":
+        if not toggles.get("include_mac", False):
+            forced_messages.append(
+                "MAC report always includes Marketing Attribution Codes. Proceeding "
+                "with MAC values enabled."
+            )
+        toggles["include_mac"] = True
+        cli_args.include_mac = True
+
+    for message in forced_messages:
+        print(message)
 
     if ignored_cli_arguments and getattr(cli_args, "cli_mode", False):
         formatted = ", ".join(sorted(ignored_cli_arguments))

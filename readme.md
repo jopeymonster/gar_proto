@@ -35,26 +35,15 @@ The reporter supports multiple reporting scopes, each with its own options:
   
 ### Performance
 
-- **MAC (Marketing Attribution Code)**
-  A custom extension for deeper analysis.
-  - Embed a custom identifier in your campaign naming convention:
-    ```
-    Campaign Name :marketing_attribution_code
-    ```
-    Examples:
-    - `Nike Shoes - Holiday Sales :nikeholidaysales`
-    - `Chicago - Legal - FRG :chi_frg_legal`
-    - `GoogleAdsCampaign: MyCampaign :my_marketing_attribution_code`
-  - Uses:
-    - Audit UTM parameters against campaigns.
-    - Link Ads activity with ERP or CRM systems.
-    - Add a flexible reporting dimension for cross-channel analysis.
-  - If no `:marketing_attribution_code` is present, the report will return `None`/blank.
+- **Campaign Types**
+  Break down spend by advertising channel across every campaign.
+  - Always includes channel segmentation so you can compare Search, Display, Video, and more without extra toggles.
+  - Pair with the MAC toggle to audit marketing attribution codes for campaigns that embed them in their names.
 
 ---
 
-- **Account**  
-  High-level KPIs at the account level. Useful for executive summaries or quick health checks across accounts without drilling into campaign details.  
+- **Account**
+  High-level KPIs at the account level. Useful for executive summaries or quick health checks across accounts without drilling into campaign details. 
 
 ---
 
@@ -82,6 +71,24 @@ The reporter supports multiple reporting scopes, each with its own options:
   - Available metrics include:  
     - Paid CPC, organic clicks, combined impressions, query frequency.  
   - Ideal for identifying **keyword gaps** or measuring **incremental lift** when ads + organic overlap.  
+
+---
+
+- **MAC (Marketing Attribution Code)**
+  A custom extension for deeper analysis.
+  - Embed a custom identifier in your campaign naming convention:
+    ```
+    Campaign Name :marketing_attribution_code
+    ```
+    Examples:
+    - `Nike Shoes - Holiday Sales :nikeholidaysales`
+    - `Chicago - Legal - FRG :chi_frg_legal`
+    - `GoogleAdsCampaign: MyCampaign :my_marketing_attribution_code`
+  - Uses:
+    - Audit UTM parameters against campaigns.
+    - Link Ads activity with ERP or CRM systems.
+    - Add a flexible reporting dimension for cross-channel analysis.
+  - If no `:marketing_attribution_code` is present, the report will return `None`/blank.
 
 ---
 
@@ -219,7 +226,11 @@ python -m gar --report performance:ads --account single:1234567890 --output csv 
   ```bash
   python -m gar --device include
   python -m gar --channel-types exclude
+  python -m gar --mac exclude
   ```
+
+MAC toggles default to 'include' for reports that contain campaign names.
+Use `--mac exclude` to hide attribution codes when needed.
 
 Run `python -m gar --help` for the full argument list.
 
