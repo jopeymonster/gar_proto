@@ -33,6 +33,11 @@ def report_opt_prompt():
         for option, label, _ in common.PERFORMANCE_REPORT_MENU_OPTIONS:
             print(f"{option}. {label}")
         print("Or type 'exit' at any prompt to quit immediately.\n")
+        print(
+            "NOTE: The 'Campaign Type' report summarizes spend by advertising "
+            "channel and always includes channel segmentation. MAC values can "
+            "be toggled for reports that contain campaign names.\n"
+        )
         report_opt_input = input(
             "Choose a numbered option (1, 2, etc or 'exit' to exit): "
         ).strip()

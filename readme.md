@@ -35,8 +35,42 @@ The reporter supports multiple reporting scopes, each with its own options:
   
 ### Performance
 
-- **MAC (Marketing Attribution Code)**
-  A custom extension for deeper analysis.
+- **Campaign Types**: Evaluate spend by advertising channel across every campaign.
+  - Always includes channel segmentation so you can compare Search, Display, Video, and more without extra toggles.
+  - Pair with the MAC toggle to audit marketing attribution codes for campaigns that embed them in their names.
+
+---
+
+- **Account**: High-level KPIs at the account level. 
+  - Useful for executive summaries or quick health checks across accounts without drilling into campaign details. 
+
+---
+
+- **Ads**: Campaign, ad group, and ad-level performance reporting.
+  - Standard metrics: impressions, clicks, conversions, costs.
+  - Dimensions: device breakdowns, channel type, campaign metadata.
+  - Includes MAC values where available.
+
+---
+
+- **GLCID / Click View**: Exposes **click-level data** tied to Google Click Identifiers (GCLID).  
+  - Shows both valid and invalid clicks.  
+  - **Limitations**:  
+    - Must query a **single day**.  
+    - Only available for data within the **last 90 days**.  
+  - Use cases: validating click-level tracking, fraud auditing, and attribution analysis.  
+
+---
+
+- **Paid & Organic Search Terms (POSTV)**: Combines paid ads + organic results at the query level.  
+  - Aggregated at **ad group scope**.  
+  - Available metrics include:  
+    - Paid CPC, organic clicks, combined impressions, query frequency.  
+  - Ideal for identifying **keyword gaps** or measuring **incremental lift** when ads + organic overlap.  
+
+---
+
+- **MAC (Marketing Attribution Code)**: A custom extension for deeper analysis.
   - Embed a custom identifier in your campaign naming convention:
     ```
     Campaign Name :marketing_attribution_code
@@ -53,56 +87,21 @@ The reporter supports multiple reporting scopes, each with its own options:
 
 ---
 
-- **Account**  
-  High-level KPIs at the account level. Useful for executive summaries or quick health checks across accounts without drilling into campaign details.  
-
----
-
-- **Ads**
-  Campaign, ad group, and ad-level performance reporting.
-  - Standard metrics: impressions, clicks, conversions, costs.
-  - Dimensions: device breakdowns, channel type, campaign metadata.
-  - Includes MAC values where available.
-
----
-
-- **GLCID / Click View**  
-  Exposes **click-level data** tied to Google Click Identifiers (GCLID).  
-  - Shows both valid and invalid clicks.  
-  - **Limitations**:  
-    - Must query a **single day**.  
-    - Only available for data within the **last 90 days**.  
-  - Use cases: validating click-level tracking, fraud auditing, and attribution analysis.  
-
----
-
-- **Paid & Organic Search Terms (POSTV)**  
-  Combines paid ads + organic results at the query level.  
-  - Aggregated at **ad group scope**.  
-  - Available metrics include:  
-    - Paid CPC, organic clicks, combined impressions, query frequency.  
-  - Ideal for identifying **keyword gaps** or measuring **incremental lift** when ads + organic overlap.  
-
----
-
 ### Auditing
 
-- **Account Labels**  
-  Fetches all labels assigned to the account for review.  
+- **Account Labels**: Fetches all labels assigned to the account for review.  
   - Does not return any associating campaigns, ad groups, or ads.  
   - Use cases: verifying naming conventions and label hygiene.  
 
 ---
 
-- **Campaign Groups**  
-  Returns the account's current campaign groups by name and ID.
+- **Campaign Groups**: Returns the account's current campaign groups by name and ID.
   - Does not return any associating campaigns, ad groups, or ads.  
   - Use cases: confirming campaign group assignments, validating group-level strategy.  
 
 ---
 
-- **Campaign and Ad Group Label Audit**  
-  Obtains all campaign group and label designations for campaign and ad group scopes.  
+- **Campaign and Ad Group Label Audit**: Obtains all campaign group and label designations for campaign and ad group scopes.  
   - Includes campaign/ad group details and applied labels.  
   - Use cases: checking compliance with internal naming/labeling standards, surfacing unlabeled assets.  
 
@@ -110,8 +109,7 @@ The reporter supports multiple reporting scopes, each with its own options:
 
 ### Budgeting
 
-- **Budget Overview**  
-  Summarizes monthly budgets, current spend, and pacing.  
+- **Budget Overview**: Summarizes monthly budgets, current spend, and pacing.  
   - View across one or multiple accounts.  
   - Use cases: monitoring over/under-spend, pacing against plan, budget caps.  
 
@@ -219,7 +217,11 @@ python -m gar --report performance:ads --account single:1234567890 --output csv 
   ```bash
   python -m gar --device include
   python -m gar --channel-types exclude
+  python -m gar --mac exclude
   ```
+
+MAC toggles default to 'include' for reports that contain campaign names.
+Use `--mac exclude` to hide attribution codes when needed.
 
 Run `python -m gar --help` for the full argument list.
 

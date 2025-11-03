@@ -64,6 +64,17 @@ def build_parser():
         help="Preferred output handling for report data (csv, table, or auto).",
     )
     parser.add_argument(
+        "--mac",
+        dest="include_mac",
+        type=common.parse_toggle_choice,
+        metavar="{include,exclude}",
+        help=(
+            "Include or exclude Marketing Attribution Codes (MAC) where campaign "
+            "names support them (default: include when running non-interactively). "
+            "The MAC report always includes MAC values."
+        ),
+    )
+    parser.add_argument(
         "--channel-types",
         "--channel_types",
         "--channel",
@@ -72,7 +83,7 @@ def build_parser():
         metavar="{include,exclude}",
         help=(
             "Include or exclude channel type segmentation (default: exclude when not "
-            "specified)."
+            "specified). The Campaign Type report always includes channel types."
         ),
     )
     parser.add_argument(
@@ -286,18 +297,20 @@ def performance_menu(gads_service, client, full_accounts_info, cli_args):
     )
 
     single_dispatch = {
-        "mac": services.mac_report_single,
+        "camptype": services.camptype_report_single,
         "account": services.account_report_single,
         "ads": services.ad_level_report_single,
         "clickview": services.click_view_report_single,
         "paid_organic_terms": services.paid_org_search_term_report_single,
+        "mac": services.mac_report_single,
     }
     all_dispatch = {
-        "mac": services.mac_report_all,
+        "camptype": services.camptype_report_all,
         "account": services.account_report_all,
         "ads": services.ad_level_report_all,
         "clickview": services.click_view_report_all,
         "paid_organic_terms": services.paid_org_search_term_report_all,
+        "mac": services.mac_report_all,
     }
 
     if account_scope == "single":

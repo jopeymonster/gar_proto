@@ -375,6 +375,161 @@ PERFORMANCE REPORTS
 """
 
 
+def camptype_report_single(
+    gads_service, client, start_date, end_date, time_seg, customer_id, **kwargs
+):
+    """Generate the campaign type performance report for a single account.
+
+    Args:
+        gads_service (GoogleAdsService): Service used to execute GAQL queries.
+        client (GoogleAdsClient): Authenticated API client for enum decoding.
+        start_date (str): Inclusive start date ('YYYY-MM-DD').
+        end_date (str): Inclusive end date ('YYYY-MM-DD').
+        time_seg (str): Time segmentation key (for example '"date"').
+        customer_id (str): Customer ID for the target account.
+        **kwargs: Optional toggles controlling channel, campaign, and ad group
+            inclusion.
+
+    Returns:
+        tuple[list[list], list[str]]: Table rows and corresponding headers.
+    """
+
+    # enum decoders
+    undecoded_enums = get_enums(client)
+    channel_type_enum, *extra = undecoded_enums
+    time_seg_string = f"segments.{time_seg}"
+    include_mac = kwargs.get("include_mac", False)
+    include_campaign_info = kwargs.get("include_campaign_info", False)
+    # GAQL query
+    camptype_report_query = queries.camptype_report_query(
+        start_date, end_date, time_seg_string, **kwargs
+    )
+    camptype_query_response = gads_service.search_stream(
+        customer_id=customer_id, query=camptype_report_query
+    )
+    # initialize empty list
+    table_data = []
+    # fetch data and populate list
+    for batch in camptype_query_response:
+        for row in batch.results:
+            mac = common.extract_mac(row.campaign.name)
+            channel_type = (
+                channel_type_enum.AdvertisingChannelType.Name(
+                    row.campaign.advertising_channel_type
+                )
+                if hasattr(row.campaign, "advertising_channel_type")
+                else "UNDEFINED"
+            )
+            date_value = getattr(row.segments, time_seg)
+            cost_value = common.micros_to_decimal(
+                row.metrics.cost_micros, Decimal("0.01")
+            )
+            # build dict, primary dims/metrics first
+            camptype_dict = {
+                "Date": date_value,
+                "Account name": row.customer.descriptive_name,
+                "Customer ID": row.customer.id,
+                "Campaign type": channel_type,
+                "Cost": cost_value,
+            }
+            # append campaign info if selected
+            if include_campaign_info:
+                camptype_dict["Campaign"] = row.campaign.name
+            # append mac types if selected
+            if include_mac:
+                camptype_dict["MAC"] = mac
+
+            # append dict
+            table_data.append(camptype_dict)
+    # define headers
+    headers = [
+        "Date",
+        "Account name",
+        "Customer ID",
+        "Campaign type",
+    ]  # primary dimensions
+    if include_campaign_info:
+        headers.append("Campaign")
+    if include_mac:
+        headers.append("MAC")
+    headers.append("Cost")  # primary metrics
+    report_dimensions = headers[:-1]
+    # Aggregate by key
+    aggregated = defaultdict(lambda: Decimal("0.00"))
+    for row in table_data:
+        key = tuple(row.get(field) for field in report_dimensions)
+        aggregated[key] += row.get("Cost", Decimal("0.00"))
+    # convert aggregated dict into row of dicts
+    aggregated_rows = [
+        {**dict(zip(report_dimensions, key)), "Cost": total}
+        for key, total in aggregated.items()
+    ]
+    # sort by date ascending, cost descending
+    table_data_sorted = sorted(
+        aggregated_rows,
+        key=lambda r: (r.get("Date"), r.get("Account name"), -float(r.get("Cost", 0))),
+    )
+    filtered_data = [[row.get(h) for h in headers] for row in table_data_sorted]
+    return filtered_data, headers
+
+
+def camptype_report_all(
+    gads_service, client, start_date, end_date, time_seg, accounts_info, **kwargs
+):
+    """Generate the campaign type performance report for multiple accounts.
+
+    Args:
+        gads_service (GoogleAdsService): Service used to execute GAQL queries.
+        client (GoogleAdsClient): Authenticated API client.
+        start_date (str): Inclusive start date ('YYYY-MM-DD').
+        end_date (str): Inclusive end date ('YYYY-MM-DD').
+        time_seg (str): Time segmentation key (for example '"date"').
+        accounts_info (dict[str, str]): Mapping of customer IDs to names.
+        **kwargs: Optional toggles controlling channel, campaign, and ad group
+            inclusion.
+
+    Returns:
+        tuple[list[list], list[str]]: Combined table rows across accounts and
+        the shared headers.
+    """
+
+    all_data = []
+    headers: list[str] | None = None
+    for customer_id, account_descriptive in accounts_info.items():
+        print(f"Processing {account_descriptive}...")
+        try:
+            table_data, current_headers = camptype_report_single(
+                gads_service,
+                client,
+                start_date,
+                end_date,
+                time_seg,
+                customer_id,
+                **kwargs,
+            )
+            if headers is None:
+                headers = current_headers
+            all_data.extend(table_data)
+        except Exception as e:
+            print(f"Error processing {account_descriptive} ({customer_id}): {e}")
+    if not all_data:
+        print("No data returned for any accounts.")
+        return [], []
+    if headers is None:
+        print("Report headers could not be determined.")
+        return [], []
+    # sort by: time index (0), account name, descending cost
+    acct_idx = headers.index("Account name") if "Account name" in headers else 1
+    cost_idx = headers.index("Cost") if "Cost" in headers else -1
+    if cost_idx >= 0:
+        all_data_sorted = sorted(
+            all_data, key=lambda r: (r[0], r[acct_idx], -float(r[cost_idx]))
+        )
+    else:
+        all_data_sorted = sorted(all_data, key=lambda r: (r[0], r[acct_idx]))
+    return all_data_sorted, headers
+
+
 def mac_report_single(
     gads_service, client, start_date, end_date, time_seg, customer_id, **kwargs
 ):
@@ -494,11 +649,11 @@ def mac_report_all(
     """
 
     all_data = []
-    headers = None
+    headers: list[str] | None = None
     for customer_id, account_descriptive in accounts_info.items():
         print(f"Processing {account_descriptive}...")
         try:
-            table_data, headers = mac_report_single(
+            table_data, current_headers = mac_report_single(
                 gads_service,
                 client,
                 start_date,
@@ -507,11 +662,16 @@ def mac_report_all(
                 customer_id,
                 **kwargs,
             )
+            if headers is None:
+                headers = current_headers
             all_data.extend(table_data)
         except Exception as e:
             print(f"Error processing {account_descriptive} ({customer_id}): {e}")
     if not all_data:
         print("No data returned for any accounts.")
+        return [], []
+    if headers is None:
+        print("Report headers could not be determined.")
         return [], []
     # sort by: time index (0), account name, descending cost
     acct_idx = headers.index("Account name") if "Account name" in headers else 1
@@ -634,18 +794,23 @@ def account_report_all(
         tuple[list[list], list[str]]: Combined table rows and headers.
     """
     all_data = []
-    headers = None
+    headers: list[str] | None = None
     for customer_id, account_descriptive in accounts_info.items():
         print(f"Processing {account_descriptive}...")
         try:
-            table_data, headers = account_report_single(
+            table_data, current_headers = account_report_single(
                 gads_service, client, start_date, end_date, time_seg, customer_id
             )
+            if headers is None:
+                headers = current_headers
             all_data.extend(table_data)
         except Exception as e:
             print(f"Error processing {account_descriptive} ({customer_id}): {e}")
     if not all_data:
         print("No data returned for any accounts.")
+        return [], []
+    if headers is None:
+        print("Report headers could not be determined.")
         return [], []
     # sort by: time index (0), account name (1), descending cost
     cost_idx = headers.index("cost") if "cost" in headers else None
@@ -687,6 +852,7 @@ def ad_level_report_single(
     include_channel_types = kwargs.get("include_channel_types", False)
     include_campaign_info = kwargs.get("include_campaign_info", False)
     include_adgroup_info = kwargs.get("include_adgroup_info", False)
+    include_mac = kwargs.get("include_mac", True)
     table_data = []
     # ad_group_ad scoped query, will not capture PMAX campaigns due to lack of ad or ad_group scope dimension in Pmax
     ad_group_ad_query = queries.ad_group_ad_query(start_date, end_date, time_seg_string)
@@ -741,27 +907,32 @@ def ad_level_report_single(
                 "Date": date_value,
                 "Customer ID": row.customer.id,
                 "Account name": row.customer.descriptive_name,
-                "MAC": mac,
-                "Campaign ID": row.campaign.id,
-                "Campaign name": row.campaign.name,
-                "Campaign type": channel_type,
-                "Ad group ID": row.ad_group.id,
-                "Ad group name": row.ad_group.name,
-                "Ad group type": ad_group_type,
-                "Ad ID": row.ad_group_ad.ad.id,
-                "Ad type": ad_type,
-                "Cost": cost_value,
-                "Impr.": impressions,
-                "Abs Top Imp%": row.metrics.absolute_top_impression_percentage,
-                "Top Imp%": row.metrics.top_impression_percentage,
-                "Avg CPM": avg_cpm_value,
-                "Interactions": getattr(row.metrics, "interactions", 0) or 0,
-                "Clicks": clicks,
-                "Avg CPC": avg_cpc_value,
-                "Video Views": video_views,
-                "Conversions": conversions_metric,
-                "Conv. value": conv_value_metric,
             }
+            if include_mac:
+                ad_group_ad_dict["MAC"] = mac
+            ad_group_ad_dict.update(
+                {
+                    "Campaign ID": row.campaign.id,
+                    "Campaign name": row.campaign.name,
+                    "Campaign type": channel_type,
+                    "Ad group ID": row.ad_group.id,
+                    "Ad group name": row.ad_group.name,
+                    "Ad group type": ad_group_type,
+                    "Ad ID": row.ad_group_ad.ad.id,
+                    "Ad type": ad_type,
+                    "Cost": cost_value,
+                    "Impr.": impressions,
+                    "Abs Top Imp%": row.metrics.absolute_top_impression_percentage,
+                    "Top Imp%": row.metrics.top_impression_percentage,
+                    "Avg CPM": avg_cpm_value,
+                    "Interactions": getattr(row.metrics, "interactions", 0) or 0,
+                    "Clicks": clicks,
+                    "Avg CPC": avg_cpc_value,
+                    "Video Views": video_views,
+                    "Conversions": conversions_metric,
+                    "Conv. value": conv_value_metric,
+                }
+            )
             table_data.append(ad_group_ad_dict)
     # campaign scoped query for pmax campaigns
     pmax_campaign_query = queries.pmax_campaign_query(
@@ -808,29 +979,36 @@ def ad_level_report_single(
                 "Date": date_value,
                 "Customer ID": row.customer.id,
                 "Account name": row.customer.descriptive_name,
-                "MAC": mac,
-                "Campaign ID": row.campaign.id,
-                "Campaign name": row.campaign.name,
-                "Campaign type": channel_type,
-                "Ad group ID": row.campaign.id,  # PMAX placeholder
-                "Ad group name": row.campaign.name,  # PMAX placeholder
-                "Ad group type": "PERFORMANCE_MAX",
-                "Ad ID": row.campaign.id,  # PMAX placeholder
-                "Ad type": "PERFORMANCE_MAX",
-                "Cost": cost_value,
-                "Impr.": impressions,
-                "Abs Top Imp%": row.metrics.absolute_top_impression_percentage,
-                "Top Imp%": row.metrics.top_impression_percentage,
-                "Avg CPM": avg_cpm_value,
-                "Interactions": getattr(row.metrics, "interactions", 0) or 0,
-                "Clicks": clicks,
-                "Avg CPC": avg_cpc_value,
-                "Video Views": video_views,
-                "Conversions": conversions_metric,
-                "Conv. value": conv_value_metric,
             }
+            if include_mac:
+                pmax_dict["MAC"] = mac
+            pmax_dict.update(
+                {
+                    "Campaign ID": row.campaign.id,
+                    "Campaign name": row.campaign.name,
+                    "Campaign type": channel_type,
+                    "Ad group ID": row.ad_group.id,
+                    "Ad group name": row.ad_group.name,
+                    "Ad group type": ad_group_type,
+                    "Ad ID": row.ad_group_ad.ad.id,
+                    "Ad type": ad_type,
+                    "Cost": cost_value,
+                    "Impr.": impressions,
+                    "Abs Top Imp%": row.metrics.absolute_top_impression_percentage,
+                    "Top Imp%": row.metrics.top_impression_percentage,
+                    "Avg CPM": avg_cpm_value,
+                    "Interactions": getattr(row.metrics, "interactions", 0) or 0,
+                    "Clicks": clicks,
+                    "Avg CPC": avg_cpc_value,
+                    "Video Views": video_views,
+                    "Conversions": conversions_metric,
+                    "Conv. value": conv_value_metric,
+                }
+            )
             table_data.append(pmax_dict)
-    headers = ["Date", "Customer ID", "Account name", "MAC"]  # primary dimensions
+    headers = ["Date", "Customer ID", "Account name"]  # primary dimensions
+    if include_mac:
+        headers.append("MAC")
     if include_campaign_info:
         headers += ["Campaign ID", "Campaign name"]
     if include_channel_types:
@@ -863,12 +1041,12 @@ def ad_level_report_single(
         "Conversions",
         "Conv. value",
     }
-    dimension_fields = [h for h in headers if h not in metric_fields]
+    report_dimensions = [h for h in headers if h not in metric_fields]
     aggregated = {}
     for row in table_data:
-        key = tuple(row.get(field) for field in dimension_fields)
+        key = tuple(row.get(field) for field in report_dimensions)
         if key not in aggregated:
-            aggregated[key] = {field: row.get(field) for field in dimension_fields}
+            aggregated[key] = {field: row.get(field) for field in report_dimensions}
             aggregated[key].update(
                 {
                     "Cost": Decimal("0.00"),
@@ -978,11 +1156,11 @@ def ad_level_report_all(
         tuple[list[list], list[str]]: Combined table rows and headers.
     """
     all_data = []
-    headers = None
+    headers: list[str] | None = None
     for customer_id, account_descriptive in accounts_info.items():
         print(f"Processing {account_descriptive}...")
         try:
-            table_data, headers = ad_level_report_single(
+            table_data, current_headers = ad_level_report_single(
                 gads_service,
                 client,
                 start_date,
@@ -991,11 +1169,16 @@ def ad_level_report_all(
                 customer_id,
                 **kwargs,
             )
+            if headers is None:
+                headers = current_headers
             all_data.extend(table_data)
         except Exception as e:
             print(f"Error processing {account_descriptive} ({customer_id}): {e}")
     if not all_data:
         print("No data returned for any accounts.")
+        return [], []
+    if headers is None:
+        print("Report headers could not be determined.")
         return [], []
     # dynamic sort by cost, account name
     cost_idx = headers.index("Cost") if "Cost" in headers else None
@@ -1043,6 +1226,7 @@ def click_view_report_single(
     include_campaign_info = kwargs.get("include_campaign_info", False)
     include_adgroup_info = kwargs.get("include_adgroup_info", False)
     include_device_info = kwargs.get("include_device_info", False)
+    include_mac = kwargs.get("include_mac", False)
     # GAQL query
     click_view_query = queries.click_view_query(start_date, end_date, time_seg_string)
     # fetch data
@@ -1086,6 +1270,8 @@ def click_view_report_single(
                 if getattr(row.click_view, "keyword_info", None)
                 else None
             )
+            if include_mac:
+                mac = common.extract_mac(row.campaign.name)
             # build row dict with response
             click_view_dict = {
                 "Date": date_value,
@@ -1116,10 +1302,14 @@ def click_view_report_single(
                 "click type": click_type,
                 "clicks": row.metrics.clicks,
             }
+            if include_mac:
+                click_view_dict["MAC"] = mac
             # append dict
             table_data.append(click_view_dict)
     # define the headers for the table
     headers = ["Date", "Account name", "Customer ID"]  # primary dimensions
+    if include_mac:
+        headers.append("MAC")
     if include_campaign_info:
         headers += ["Campaign ID", "Campaign name"]
     if include_channel_types:
@@ -1131,12 +1321,12 @@ def click_view_report_single(
         headers.append("device")
     headers += ["click type", "clicks"]  # metrics
     metric_fields = {"clicks"}
-    dimension_fields = [h for h in headers if h not in metric_fields]
+    report_dimensions = [h for h in headers if h not in metric_fields]
     aggregated = {}
     for row in table_data:
-        key = tuple(row.get(field) for field in dimension_fields)
+        key = tuple(row.get(field) for field in report_dimensions)
         if key not in aggregated:
-            aggregated[key] = {field: row.get(field) for field in dimension_fields}
+            aggregated[key] = {field: row.get(field) for field in report_dimensions}
             aggregated[key]["clicks"] = 0
         aggregated[key]["clicks"] += row.get("clicks", 0) or 0
     aggregated_rows = sorted(
@@ -1166,11 +1356,11 @@ def click_view_report_all(
         tuple[list[list], list[str]]: Combined table rows and headers.
     """
     all_data = []
-    headers = None
+    headers: list[str] | None = None
     for customer_id, account_descriptive in accounts_info.items():
         print(f"Processing {account_descriptive}...")
         try:
-            table_data, headers = click_view_report_single(
+            table_data, current_headers = click_view_report_single(
                 gads_service,
                 client,
                 start_date,
@@ -1179,11 +1369,16 @@ def click_view_report_all(
                 customer_id,
                 **kwargs,
             )
+            if headers is None:
+                headers = current_headers
             all_data.extend(table_data)
         except Exception as e:
             print(f"Error processing {account_descriptive} ({customer_id}): {e}")
     if not all_data:
         print("No data returned for any accounts.")
+        return [], []
+    if headers is None:
+        print("Report headers could not be determined.")
         return [], []
     # sort by: time index (0), account name, descending clicks
     acct_idx = headers.index("Account name") if "Account name" in headers else 1
@@ -1229,6 +1424,7 @@ def paid_org_search_term_report_single(
     include_campaign_info = kwargs.get("include_campaign_info", False)
     include_adgroup_info = kwargs.get("include_adgroup_info", False)
     include_device_info = kwargs.get("include_device_info", False)
+    include_mac = kwargs.get("include_mac", False)
     # GAQL query
     paid_org_search_term_query = queries.paid_organic_search_term_view_query(
         start_date, end_date, time_seg_string
@@ -1325,10 +1521,14 @@ def paid_org_search_term_report_single(
                 "total clicks": combined_clicks,
                 "total clicks per query": combined_clicks_per_query,
             }
+            if include_mac:
+                paid_org_search_term_dict["MAC"] = common.extract_mac(row.campaign.name)
             # append dict
             table_data.append(paid_org_search_term_dict)
     # define the headers for the table
     headers = ["Date", "Account name", "Customer ID"]  # primary dimensions
+    if include_mac:
+        headers.append("MAC")
     if include_campaign_info:
         headers += ["Campaign name", "Campaign ID"]
     if include_channel_types:
@@ -1373,12 +1573,12 @@ def paid_org_search_term_report_single(
         "total clicks",
         "total clicks per query",
     }
-    dimension_fields = [h for h in headers if h not in metric_fields]
+    report_dimensions = [h for h in headers if h not in metric_fields]
     aggregated = {}
     for row in table_data:
-        key = tuple(row.get(field) for field in dimension_fields)
+        key = tuple(row.get(field) for field in report_dimensions)
         if key not in aggregated:
-            aggregated[key] = {field: row.get(field) for field in dimension_fields}
+            aggregated[key] = {field: row.get(field) for field in report_dimensions}
             aggregated[key].update(
                 {
                     "org queries": 0,
@@ -1478,11 +1678,11 @@ def paid_org_search_term_report_all(
         tuple[list[list], list[str]]: Combined table rows and headers.
     """
     all_data = []
-    headers = None
+    headers: list[str] | None = None
     for customer_id, account_descriptive in accounts_info.items():
         print(f"Processing {account_descriptive}...")
         try:
-            table_data, headers = paid_org_search_term_report_single(
+            table_data, current_headers = paid_org_search_term_report_single(
                 gads_service,
                 client,
                 start_date,
@@ -1491,11 +1691,16 @@ def paid_org_search_term_report_all(
                 customer_id,
                 **kwargs,
             )
+            if headers is None:
+                headers = current_headers
             all_data.extend(table_data)
         except Exception as e:
             print(f"Error processing {account_descriptive} ({customer_id}): {e}")
     if not all_data:
         print("No data returned for any accounts.")
+        return [], []
+    if headers is None:
+        print("Report headers could not be determined.")
         return [], []
     # sort by: time index (0), account name (1), descending total combined clicks
     acct_idx = headers.index("Account name") if "Account name" in headers else 1

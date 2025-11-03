@@ -107,6 +107,28 @@ def label_audit_query():
     """
 
 
+def camptype_report_query(start_date, end_date, time_seg_string, **kwargs):
+    """Return a GAQL query for the campaign type performance report."""
+
+    select_fields = [
+        time_seg_string,
+        "customer.descriptive_name",
+        "customer.id",
+        "campaign.name",
+        "campaign.advertising_channel_type",
+        "metrics.cost_micros",
+    ]
+    where_clauses = []
+    return build_query(
+        resource="campaign",
+        select_fields=select_fields,
+        start_date=start_date,
+        end_date=end_date,
+        where_clauses=where_clauses,
+        order_by=[f"{time_seg_string} ASC"],
+    )
+
+
 # mac
 def mac_report_query(start_date, end_date, time_seg_string, **kwargs):
     """Return a GAQL query for the MAC performance report."""
