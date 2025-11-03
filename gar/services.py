@@ -494,11 +494,11 @@ def mac_report_all(
     """
 
     all_data = []
-    headers = None
+    headers: list[str] | None = None
     for customer_id, account_descriptive in accounts_info.items():
         print(f"Processing {account_descriptive}...")
         try:
-            table_data, headers = mac_report_single(
+            table_data, current_headers = mac_report_single(
                 gads_service,
                 client,
                 start_date,
@@ -507,11 +507,16 @@ def mac_report_all(
                 customer_id,
                 **kwargs,
             )
+            if headers is None:
+                headers = current_headers
             all_data.extend(table_data)
         except Exception as e:
             print(f"Error processing {account_descriptive} ({customer_id}): {e}")
     if not all_data:
         print("No data returned for any accounts.")
+        return [], []
+    if headers is None:
+        print("Report headers could not be determined.")
         return [], []
     # sort by: time index (0), account name, descending cost
     acct_idx = headers.index("Account name") if "Account name" in headers else 1
@@ -634,18 +639,23 @@ def account_report_all(
         tuple[list[list], list[str]]: Combined table rows and headers.
     """
     all_data = []
-    headers = None
+    headers: list[str] | None = None
     for customer_id, account_descriptive in accounts_info.items():
         print(f"Processing {account_descriptive}...")
         try:
-            table_data, headers = account_report_single(
+            table_data, current_headers = account_report_single(
                 gads_service, client, start_date, end_date, time_seg, customer_id
             )
+            if headers is None:
+                headers = current_headers
             all_data.extend(table_data)
         except Exception as e:
             print(f"Error processing {account_descriptive} ({customer_id}): {e}")
     if not all_data:
         print("No data returned for any accounts.")
+        return [], []
+    if headers is None:
+        print("Report headers could not be determined.")
         return [], []
     # sort by: time index (0), account name (1), descending cost
     cost_idx = headers.index("cost") if "cost" in headers else None
@@ -978,11 +988,11 @@ def ad_level_report_all(
         tuple[list[list], list[str]]: Combined table rows and headers.
     """
     all_data = []
-    headers = None
+    headers: list[str] | None = None
     for customer_id, account_descriptive in accounts_info.items():
         print(f"Processing {account_descriptive}...")
         try:
-            table_data, headers = ad_level_report_single(
+            table_data, current_headers = ad_level_report_single(
                 gads_service,
                 client,
                 start_date,
@@ -991,11 +1001,16 @@ def ad_level_report_all(
                 customer_id,
                 **kwargs,
             )
+            if headers is None:
+                headers = current_headers
             all_data.extend(table_data)
         except Exception as e:
             print(f"Error processing {account_descriptive} ({customer_id}): {e}")
     if not all_data:
         print("No data returned for any accounts.")
+        return [], []
+    if headers is None:
+        print("Report headers could not be determined.")
         return [], []
     # dynamic sort by cost, account name
     cost_idx = headers.index("Cost") if "Cost" in headers else None
@@ -1166,11 +1181,11 @@ def click_view_report_all(
         tuple[list[list], list[str]]: Combined table rows and headers.
     """
     all_data = []
-    headers = None
+    headers: list[str] | None = None
     for customer_id, account_descriptive in accounts_info.items():
         print(f"Processing {account_descriptive}...")
         try:
-            table_data, headers = click_view_report_single(
+            table_data, current_headers = click_view_report_single(
                 gads_service,
                 client,
                 start_date,
@@ -1179,11 +1194,16 @@ def click_view_report_all(
                 customer_id,
                 **kwargs,
             )
+            if headers is None:
+                headers = current_headers
             all_data.extend(table_data)
         except Exception as e:
             print(f"Error processing {account_descriptive} ({customer_id}): {e}")
     if not all_data:
         print("No data returned for any accounts.")
+        return [], []
+    if headers is None:
+        print("Report headers could not be determined.")
         return [], []
     # sort by: time index (0), account name, descending clicks
     acct_idx = headers.index("Account name") if "Account name" in headers else 1
@@ -1478,11 +1498,11 @@ def paid_org_search_term_report_all(
         tuple[list[list], list[str]]: Combined table rows and headers.
     """
     all_data = []
-    headers = None
+    headers: list[str] | None = None
     for customer_id, account_descriptive in accounts_info.items():
         print(f"Processing {account_descriptive}...")
         try:
-            table_data, headers = paid_org_search_term_report_single(
+            table_data, current_headers = paid_org_search_term_report_single(
                 gads_service,
                 client,
                 start_date,
@@ -1491,11 +1511,16 @@ def paid_org_search_term_report_all(
                 customer_id,
                 **kwargs,
             )
+            if headers is None:
+                headers = current_headers
             all_data.extend(table_data)
         except Exception as e:
             print(f"Error processing {account_descriptive} ({customer_id}): {e}")
     if not all_data:
         print("No data returned for any accounts.")
+        return [], []
+    if headers is None:
+        print("Report headers could not be determined.")
         return [], []
     # sort by: time index (0), account name (1), descending total combined clicks
     acct_idx = headers.index("Account name") if "Account name" in headers else 1
