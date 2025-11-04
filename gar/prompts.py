@@ -35,7 +35,7 @@ def report_opt_prompt():
         print("Or type 'exit' at any prompt to quit immediately.\n")
         print(
             "NOTE: The 'Campaign Type' report summarizes spend by advertising "
-            "channel and always includes channel segmentation. MAC values can "
+            "channel and always includes channel segmentation. \nMAC values can "
             "be toggled for reports that contain campaign names.\n"
         )
         report_opt_input = input(
