@@ -452,14 +452,6 @@ def include_device_info() -> bool:
 # -----------------------------
 
 PERFORMANCE_TOGGLE_CONFIG = {
-    "include_mac": {
-        "attr": "include_mac",
-        "reports": {"camptype", "ads", "clickview", "paid_organic_terms"},
-        "prompt": include_mac_types,
-        "label": "marketing attribution codes",
-        "cli_option": "--mac",
-        "default": True,
-    },
     "include_channel_types": {
         "attr": "include_channel_type",
         "reports": {"mac", "ads", "clickview", "paid_organic_terms"},
@@ -475,6 +467,14 @@ PERFORMANCE_TOGGLE_CONFIG = {
         "label": "campaign metadata",
         "cli_option": "--campaign-info",
         "default": False,
+    },
+    "include_mac": {
+        "attr": "include_mac",
+        "reports": {"camptype", "ads", "clickview", "paid_organic_terms"},
+        "prompt": include_mac_types,
+        "label": "marketing attribution codes",
+        "cli_option": "--mac",
+        "default": True,
     },
     "include_adgroup_info": {
         "attr": "include_adgroup_info",
